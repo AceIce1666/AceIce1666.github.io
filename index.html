@@ -13,17 +13,15 @@
 :root {
   --bg: #f7f7f7;                      /* 页面底色：小恐龙游戏经典底色 */
   --ink: #535353;                     /* 主色：恐龙、边框、文字 */
-  --card: rgba(255, 255, 255, 0.86);  /* 面板底色 */
+  --card: rgba(255, 255, 255, 0.95);  /* 面板底色 */
   --muted: #8f8f8f;                   /* 次要文字 */
-  --cloud: #e2e2e2;                   /* 云朵 */
   --line: rgba(83, 83, 83, 0.4);      /* 地面线等装饰线 */
 }
 body.night {
   --bg: #191919;
   --ink: #e9e9e9;
-  --card: rgba(30, 30, 36, 0.88);
+  --card: rgba(30, 30, 36, 0.95);
   --muted: #9a9a9a;
-  --cloud: #2b2b31;
   --line: rgba(233, 233, 233, 0.38);
 }
 
@@ -70,11 +68,13 @@ body {
 }
 .cactus-img {
   position: absolute;
+  left: 0;
   bottom: 10vh;
   width: 34px;
   height: 70px;
   image-rendering: pixelated;
   opacity: 0.65;
+  will-change: transform;
 }
 .cloud-img {
   position: absolute;
@@ -106,6 +106,31 @@ body.night .cloud-img { filter: invert(1); }
   pointer-events: none;
   user-select: none;
   transition: color 0.3s ease;
+}
+
+/* 左上角实时时钟 */
+#clock {
+  position: fixed;
+  top: 44px;
+  left: 24px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ink);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+  transition: color 0.3s ease;
+}
+#clock-time {
+  font-family: "Cascadia Mono", "Consolas", "Courier New", monospace;
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+#clock-date {
+  font-size: 11px;
+  letter-spacing: 1px;
 }
 
 /* ---------- 白天 / 黑夜按钮 ---------- */
@@ -188,8 +213,6 @@ img.avatar { display: block; object-fit: cover; }
   background: var(--card);
   color: var(--ink);
   text-decoration: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 .social svg { width: 26px; height: 26px; fill: currentColor; display: block; }
@@ -222,26 +245,27 @@ img.avatar { display: block; object-fit: cover; }
 }
 
 /* 第二屏：我的项目 */
-.projects, .sites {
+.projects, .sites, .doing, .fun {
   max-width: 860px;
   width: 100%;
   margin: 0 auto;
   padding: 10px 24px 80px;
 }
-.projects h2, .sites h2 {
+.doing, .fun { padding-bottom: 30px; }
+.projects h2, .sites h2, .doing h2 {
   margin: 0 0 10px;
   text-align: center;
   font-size: 26px;
   letter-spacing: 3px;
 }
-.projects h2::after, .sites h2::after {
+.projects h2::after, .sites h2::after, .doing h2::after {
   content: "";
   display: block;
   width: 44px; height: 2px;
   margin: 12px auto 0;
   background: var(--line);
 }
-.projects .sub, .sites .sub {
+.projects .sub, .sites .sub, .doing .sub {
   margin: 0 0 30px;
   text-align: center;
   font-size: 14px;
@@ -259,8 +283,6 @@ img.avatar { display: block; object-fit: cover; }
   border: 2px dashed var(--line);
   border-radius: 18px;
   background: var(--card);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 .empty-emoji { display: block; font-size: 46px; margin-bottom: 12px; }
 .empty-card p { margin: 6px 0; font-size: 18px; }
@@ -275,8 +297,6 @@ img.avatar { display: block; object-fit: cover; }
   background: var(--card);
   color: var(--ink);
   text-decoration: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 .project-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
@@ -295,13 +315,11 @@ img.avatar { display: block; object-fit: cover; }
   align-items: center;
   gap: 16px;
   padding: 16px 18px;
-  border: 2px solid var(--ink);
+  border: 2px dashed var(--line);
   border-radius: 16px;
   background: var(--card);
   color: var(--ink);
   text-decoration: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 .site-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
@@ -322,6 +340,275 @@ img.avatar { display: block; object-fit: cover; }
 .site-info p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
 .site-card:hover .site-info p { color: var(--bg); }
 
+/* 最近在做：进行中事项卡片（虚线边框，和「我的项目」占位卡一致） */
+.doing-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+.doing-col {
+  display: flex;
+  flex-direction: column;
+}
+.doing-card, .music-card { flex: 1; width: 100%; }
+.doing-card {
+  padding: 22px 28px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.doing-item {
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--ink);
+}
+
+/* 听首歌吧：音乐卡片 + 选歌弹窗 */
+.music-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 26px 20px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.music-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
+.music-icon { font-size: 40px; }
+.music-name { font-size: 17px; }
+.music-hint { font-size: 12px; color: var(--muted); }
+.music-card:hover .music-hint { color: var(--bg); }
+
+/* 旋转封面圆盘（有封面显示封面，无封面用渐变 + 🎵 占位） */
+.vinyl-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.disc {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a505c, #1c1e24 70%);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  animation: vinyl-spin 8s linear infinite;
+  animation-play-state: paused;
+}
+.disc.playing { animation-play-state: running; }
+@keyframes vinyl-spin {
+  to { transform: rotate(360deg); }
+}
+.disc-note {
+  font-size: 34px;
+  pointer-events: none;
+}
+.disc::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+/* 进度条：拖动跳转播放位置 */
+.music-time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+  margin: 0 auto 14px;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.music-seek {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  outline: none;
+  cursor: pointer;
+}
+.music-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--card);
+  cursor: pointer;
+}
+.music-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--card);
+  cursor: pointer;
+}
+.music-mode {
+  position: relative;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mode-icon {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+.music-mode:hover { background: var(--ink); color: var(--bg); }
+.music-mode.loop { background: var(--ink); color: var(--bg); }
+.music-mode.loop::after {
+  content: "1";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 11px;
+  text-align: center;
+}
+
+.music-overlay, .about-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.music-overlay.open, .about-overlay.open { opacity: 1; pointer-events: auto; }
+.music-panel, .about-panel {
+  position: relative;
+  width: min(92vw, 420px);
+  max-height: 80vh;
+  overflow: auto;
+  padding: 30px 26px 22px;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: center;
+  transform: scale(0.85);
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.music-overlay.open .music-panel,
+.about-overlay.open .about-panel { transform: scale(1); }
+.music-panel h3, .about-panel h3 { margin: 0 0 16px; font-size: 20px; }
+.about-avatar {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 14px;
+  display: block;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg);
+}
+.music-close, .about-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: none;
+  background: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.music-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.music-play {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.music-play:hover { background: var(--ink); color: var(--bg); }
+.music-tip { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+
+/* 关于我弹窗：标签 + 长简介预留区 */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.tag {
+  padding: 6px 14px;
+  font-size: 14px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.tag:hover { background: var(--ink); color: var(--bg); transform: translateY(-2px); }
+.about-intro {
+  margin-top: 18px;
+  padding: 16px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  text-align: left;
+}
+.about-intro-title { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.about-intro-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink);
+  min-height: 60px;
+}
+
 footer {
   position: relative;
   z-index: 1;
@@ -335,7 +622,7 @@ footer {
 #toast {
   position: fixed;
   left: 50%;
-  bottom: 36px;
+  bottom: 100px;
   transform: translateX(-50%) translateY(16px);
   padding: 9px 20px;
   border-radius: 999px;
@@ -354,6 +641,13 @@ footer {
   .avatar { width: 112px; height: 112px; }
   .hero h1 { font-size: 26px; }
   .site-grid { grid-template-columns: 1fr; }
+  /* 手机端：左上角欢迎语与时钟整体缩小靠边，避免拥挤 */
+  #welcome { top: 14px; left: 14px; font-size: 12px; }
+  #clock { top: 34px; left: 14px; }
+  #clock-time { font-size: 13px; }
+  #clock-date { font-size: 10px; }
+  /* 最近在做 / 听首歌吧 上下堆叠 */
+  .doing-row { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -378,6 +672,12 @@ footer {
 
   <!-- 左上角欢迎语 -->
   <div id="welcome" aria-hidden="true">Personal Homepage</div>
+
+  <!-- 左上角实时时钟 -->
+  <div id="clock" aria-hidden="true">
+    <span id="clock-time">--:--:--</span>
+    <span id="clock-date">--月--日 周-</span>
+  </div>
 
   <button id="theme-toggle" type="button" title="切换白天 / 黑夜">🌙</button>
 
@@ -434,6 +734,91 @@ footer {
       </div>
     </section>
 
+    <!-- ============ 大栏目：最近在做 ============ -->
+    <section class="doing" id="doing">
+      <h2>最近在做</h2>
+      <p class="sub">正在进行中的二三事</p>
+      <div class="doing-card">
+        <div class="doing-item">📚 努力学习ing</div>
+        <div class="doing-item">✨ 充盈自己 · 这可是头等大事</div>
+      </div>
+    </section>
+
+    <!-- ============ 并排小栏目：听首歌吧 + 关于我（点击展开） ============ -->
+    <section class="fun" id="fun">
+      <div class="doing-row">
+        <div class="doing-col">
+          <button class="music-card" id="music-btn" type="button">
+            <span class="music-icon">🎵</span>
+            <span class="music-name">听首歌吧</span>
+            <span class="music-hint">换个音乐.换种心情</span>
+          </button>
+        </div>
+        <div class="doing-col">
+          <button class="music-card" id="about-btn" type="button">
+            <span class="music-icon">💬</span>
+            <span class="music-name">关于我</span>
+            <span class="music-hint">Get to know me!</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 选歌弹窗 -->
+    <div id="music-overlay" class="music-overlay">
+      <div class="music-panel" role="dialog" aria-label="选歌">
+        <button class="music-close" id="music-close" type="button" aria-label="关闭">✕</button>
+        <div class="vinyl-wrap">
+          <div class="disc" id="disc">
+            <span class="disc-note" id="disc-note">🎵</span>
+          </div>
+        </div>
+        <div class="music-time">
+          <span id="music-cur">0:00</span>
+          <input type="range" class="music-seek" id="music-seek" min="0" max="100" step="0.1" value="0" aria-label="播放进度">
+          <span id="music-dur">0:00</span>
+          <button class="music-mode" id="music-mode" type="button" title="切换顺序播放 / 单曲循环" aria-label="切换顺序播放 / 单曲循环">
+            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+          </button>
+        </div>
+        <ul class="music-list">
+          <li><button class="music-play" type="button" data-src="torinouta.mp3" data-cover="1.png"><span>▶</span><span>鳥の詩 · Lia</span></button></li>
+          <li><button class="music-play" type="button" data-src="tooisorahe.mp3" data-cover="2.png"><span>▶</span><span>遠い空へ · 市川淳</span></button></li>
+          <li><button class="music-play" type="button" data-src="kumoito.mp3" data-cover="3.png"><span>▶</span><span>蜘蛛糸モノポリー · sasakure.UK</span></button></li>
+          <li><button class="music-play" type="button" data-src="haruhikage.mp3" data-cover="4.png"><span>▶</span><span>春日影 · MyGO!!!!!</span></button></li>
+          <li><button class="music-play" type="button" data-src="luv-letter.mp3" data-cover="5.png"><span>▶</span><span>Luv Letter · DJ OKAWARI</span></button></li>
+        </ul>
+        <p class="music-tip">点歌播放 / 暂停，拖动进度条快进</p>
+      </div>
+    </div>
+    <audio id="music-player"></audio>
+
+    <!-- 关于我弹窗 -->
+    <div id="about-overlay" class="about-overlay">
+      <div class="about-panel" role="dialog" aria-label="关于我">
+        <button class="about-close" id="about-close" type="button" aria-label="关闭">✕</button>
+        <img class="about-avatar" src="avatar.png" alt="AceIce | 祈蘭 的头像">
+        <h3>💬 关于我</h3>
+        <div class="tag-list">
+          <span class="tag">二次元</span>
+          <span class="tag">音乐爱好者</span>
+          <span class="tag">睡懒觉</span>
+        </div>
+        <div class="about-intro">
+          <p class="about-intro-title">关于我的那些事</p>
+          <p class="about-intro-text" id="about-intro-text"> （一名普通学生 
+
+      正在努力学习中       
+
+      E 人 I 人随时切换       
+
+      日常：吃饱饭 睡大觉 打游戏   
+
+      也喜欢折腾一些感兴趣的东西 ）                 </p>
+        </div>
+      </div>
+    </div>
+
     <!-- ============ 第三部分：一些有趣的网站 ============ -->
     <section class="sites" id="sites">
       <h2>一些有趣的网站</h2>
@@ -489,6 +874,173 @@ footer {
   <div id="toast" role="status"></div>
 
 <script>
+/* ---------- 左上角实时时钟（与现实时间同步） ---------- */
+try {
+  (function () {
+    var timeEl = document.getElementById("clock-time");
+    var dateEl = document.getElementById("clock-date");
+    if (!timeEl || !dateEl) return;
+    var WEEK = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    function tickClock() {
+      var d = new Date();
+      timeEl.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+      dateEl.textContent = (d.getMonth() + 1) + "月" + d.getDate() + "日 " + WEEK[d.getDay()];
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+  })();
+} catch (e) { /* 时钟异常忽略，不影响页面 */ }
+
+/* ---------- 弹窗：听首歌吧 + 关于我 ---------- */
+try {
+  (function () {
+    function bindPopup(btnId, overlayId, closeId) {
+      var btn = document.getElementById(btnId);
+      var overlay = document.getElementById(overlayId);
+      var closeBtn = document.getElementById(closeId);
+      if (!btn || !overlay) return;
+      btn.addEventListener("click", function () { overlay.classList.add("open"); });
+      if (closeBtn) closeBtn.addEventListener("click", function () { overlay.classList.remove("open"); });
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) overlay.classList.remove("open");
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") overlay.classList.remove("open");
+      });
+    }
+    bindPopup("music-btn", "music-overlay", "music-close");
+    bindPopup("about-btn", "about-overlay", "about-close");
+
+    /* 点歌播放：data-src 为音频地址，data-cover 为封面图 */
+    var player = document.getElementById("music-player");
+    var disc = document.getElementById("disc");
+    var discNote = document.getElementById("disc-note");
+    var tip = document.querySelector(".music-tip");
+    var items = document.querySelectorAll(".music-play");
+    var seek = document.getElementById("music-seek");
+    var curEl = document.getElementById("music-cur");
+    var durEl = document.getElementById("music-dur");
+    if (player) player.preload = "auto";
+
+    function setCover(url) {
+      if (disc) disc.style.backgroundImage = url ? 'url("' + url + '")' : "";
+      if (discNote) discNote.style.display = url ? "none" : "";
+    }
+    function fmt(t) {
+      if (!isFinite(t) || t < 0) return "0:00";
+      var m = Math.floor(t / 60), s = Math.floor(t % 60);
+      return m + ":" + (s < 10 ? "0" : "") + s;
+    }
+    function currentSrc() {
+      return (player.currentSrc || player.src || "").split("/").pop();
+    }
+    function updateSongIcons() {
+      var cur = currentSrc();
+      items.forEach(function (it) {
+        var src = it.getAttribute("data-src");
+        var icon = it.querySelector("span");
+        if (icon) {
+          icon.textContent = (src === cur && !player.paused) ? "⏸" : "▶";
+        }
+      });
+    }
+    items.forEach(function (it) {
+      it.addEventListener("click", function () {
+        var src = it.getAttribute("data-src");
+        var cover = it.getAttribute("data-cover") || "";
+        if (!src) {
+          if (tip) tip.textContent = "这首歌还没上传，敬请期待～";
+          return;
+        }
+        /* 点击同一首歌：暂停 / 继续 */
+        if (currentSrc() === src) {
+          if (player.paused) { player.play(); } else { player.pause(); }
+          updateSongIcons();
+          return;
+        }
+        /* 换歌：切换封面并播放 */
+        setCover(cover);
+        player.src = src;
+        var p = player.play();
+        if (p && p.catch) {
+          p.catch(function () {
+            if (tip) tip.textContent = "播放失败：请确认歌曲文件存在（torinouta.mp3 / tooisorahe.mp3）";
+          });
+        }
+        updateSongIcons();
+      });
+    });
+    if (seek) {
+      seek.addEventListener("input", function () {
+        if (!player.duration) return;
+        player.currentTime = (parseFloat(seek.value) / 100) * player.duration;
+        if (curEl) curEl.textContent = fmt(player.currentTime);
+      });
+    }
+    player.addEventListener("loadedmetadata", function () {
+      if (durEl) durEl.textContent = fmt(player.duration);
+      updateSongIcons();
+    });
+    player.addEventListener("timeupdate", function () {
+      if (seek && player.duration) {
+        seek.value = (player.currentTime / player.duration) * 100;
+      }
+      if (curEl) curEl.textContent = fmt(player.currentTime);
+    });
+    player.addEventListener("play", function () { if (disc) disc.classList.add("playing"); updateSongIcons(); });
+    player.addEventListener("pause", function () { if (disc) disc.classList.remove("playing"); updateSongIcons(); });
+    /* 播放模式：顺序播放 / 单曲循环（角标 "1" 由 CSS 显示） */
+    var loopMode = false;
+    var modeBtn = document.getElementById("music-mode");
+    if (modeBtn) {
+      modeBtn.addEventListener("click", function () {
+        loopMode = !loopMode;
+        if (loopMode) {
+          modeBtn.classList.add("loop");
+          if (typeof toast === "function") toast("♪ 单曲循环");
+        } else {
+          modeBtn.classList.remove("loop");
+          if (typeof toast === "function") toast("♪ 顺序播放");
+        }
+      });
+    }
+    player.addEventListener("ended", function () {
+      if (disc) disc.classList.remove("playing");
+      if (loopMode) {
+        /* 单曲循环：从头重播 */
+        player.currentTime = 0;
+        player.play();
+        updateSongIcons();
+        return;
+      }
+      /* 顺序播放：自动切下一首 */
+      var cur = currentSrc();
+      var idx = -1;
+      items.forEach(function (it, i) {
+        if (it.getAttribute("data-src") === cur) idx = i;
+      });
+      if (idx >= 0) {
+        var next = items[(idx + 1) % items.length];
+        var src2 = next.getAttribute("data-src");
+        var cover2 = next.getAttribute("data-cover") || "";
+        if (src2) {
+          setCover(cover2);
+          player.src = src2;
+          player.play();
+        }
+      }
+      updateSongIcons();
+    });
+    player.addEventListener("error", function () {
+      if (disc) disc.classList.remove("playing");
+      updateSongIcons();
+      if (tip) tip.textContent = "音频加载失败：请确认歌曲文件和 index.html 在同一个文件夹里";
+    });
+    updateSongIcons();
+  })();
+} catch (e) { /* 弹窗模块异常忽略 */ }
+
 /* ============================================================
  * 背景小恐龙（Chromium 开源版 T-Rex Runner 原版贴图与物理）
  * 贴图已静态写在 HTML 的 <img> 里：即使脚本不运行也有恐龙。
@@ -531,17 +1083,26 @@ try {
     var jumpVelocity = 0;
     var reachedMinHeight = false;
 
+    /* 碰撞惩罚：被仙人掌扎到 → 画面回退一段 + 恐龙抖动 → 重新跳跃 */
+    var HIT_REWIND_DIST = 140;   /* 回退距离（px） */
+    var HIT_REWIND_SPEED = 300;  /* 回退速度（px/s） */
+    var hit = { active: false, left: 0, timer: 0 };
+
     /* 4 棵仙人掌：横坐标由 JS 驱动，从右向左滚动，
        出左边界后回到队尾（原版障碍物回收机制） */
     var cacti = [];
     var spacing = 0;
     function layoutCacti() {
-      spacing = Math.max(200, (window.innerWidth - DINO_X - 60 + 160) / 4);
+      /* 仙人掌间距必须大于「腾空时间 × 速度」，否则前一颗还没落地、
+         下一颗就到跟前，恐龙会来不及跳（手机窄屏尤其明显） */
+      spacing = Math.max(280, (window.innerWidth - DINO_X - 60 + 160) / 4);
       runner.style.left = DINO_X + "px";
       for (var i = 0; i < cacti.length; i++) {
         cacti[i].x = DINO_X + 220 + i * spacing;
         cacti[i].cleared = false;
-        cacti[i].el.style.left = cacti[i].x + "px";
+        /* 用 transform 移动（GPU 合成），避免每帧改 left 触发重排 */
+        cacti[i].el.style.left = "0px";
+        cacti[i].el.style.transform = "translateX(" + cacti[i].x + "px)";
       }
     }
     cactusImgs.forEach(function (el) {
@@ -550,7 +1111,7 @@ try {
     layoutCacti();
 
     function startJump() {
-      if (jumping) return;
+      if (jumping || hit.active) return;
       jumping = true;
       reachedMinHeight = false;
       jumpVelocity = -(JUMP_VELOCITY_BASE + speed / 600);
@@ -579,6 +1140,13 @@ try {
       }
     });
 
+    /* 手机适配：点屏幕任意空白处让恐龙跳一下（点链接/按钮不受影响） */
+    document.addEventListener("touchstart", function (e) {
+      var t = e.target;
+      if (t && (t.tagName === "A" || t.tagName === "BUTTON")) return;
+      startJump();
+    }, { passive: true });
+
     function updateSpeed() {
       speed = Math.max(360, window.innerWidth * 0.15);
       LEAD = 0.1 * speed;
@@ -589,15 +1157,23 @@ try {
         var dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
 
-        /* 世界向左滚动 */
+        /* 世界滚动：正常向左；被扎到后短暂向右回退 */
+        var scrollStep = speed * dt;
+        if (hit.active) {
+          var rewind = Math.min(hit.left, HIT_REWIND_SPEED * dt);
+          hit.left -= rewind;
+          hit.timer += dt;
+          scrollStep = -rewind;   /* 负值 = 向右回退 */
+          if (hit.left <= 0) hit.active = false;
+        }
         for (var i = 0; i < cacti.length; i++) {
           var c = cacti[i];
-          c.x -= speed * dt;
+          c.x -= scrollStep;
           if (c.x < -50) {
             c.x += 4 * spacing;   /* 出左边界 → 回到队尾 */
             c.cleared = false;
           }
-          c.el.style.left = c.x + "px";
+          c.el.style.transform = "translateX(" + c.x + "px)";
         }
 
         /* 奔跑两帧交替：原版 1000/12 毫秒 = 1/12 秒一帧 */
@@ -614,17 +1190,37 @@ try {
 
         /* 自动起跳：仙人掌左缘进入「恐龙前缘 + 提前量」范围时起跳 */
         var dinoFront = DINO_X + 88;
-        for (var j = 0; j < cacti.length; j++) {
-          var cc = cacti[j];
-          if (cc.cleared) continue;
-          if (cc.x <= dinoFront + LEAD) {
-            startJump();
-            cc.cleared = true;
+        if (!hit.active) {
+          for (var j = 0; j < cacti.length; j++) {
+            var cc = cacti[j];
+            if (cc.cleared) continue;
+            if (cc.x <= dinoFront + LEAD) {
+              startJump();
+              cc.cleared = true;
+            }
           }
         }
 
-        /* 恐龙只有竖直位移，横坐标固定 —— 结构上不可能“斜着跑” */
-        runner.style.transform = "translate(0px," + (jumping ? yPos * 2 : 0) + "px)";
+        /* 碰撞检测：落地撞上仙人掌 → 触发「被扎回退」 */
+        if (!jumping && !hit.active) {
+          for (var m = 0; m < cacti.length; m++) {
+            var hc = cacti[m];
+            if (hc.x + 4 < DINO_X + 74 && hc.x + 30 > DINO_X + 14) {
+              hc.cleared = false;   /* 回退后重新触发跳跃 */
+              hit.active = true;
+              hit.left = HIT_REWIND_DIST;
+              hit.timer = 0;
+              break;
+            }
+          }
+        }
+
+        /* 恐龙横坐标固定；被扎到时左右抖一下（“哎哟”感） */
+        var shakeX = 0;
+        if (hit.active) {
+          shakeX = (Math.floor(hit.timer * 18) % 2 === 0) ? 4 : -4;
+        }
+        runner.style.transform = "translate(" + shakeX + "px," + (jumping ? yPos * 2 : 0) + "px)";
       } catch (e) { /* 单帧异常不中断循环 */ }
 
       requestAnimationFrame(tick);
