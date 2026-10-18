@@ -1,1292 +1,398 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AceIce | 祈蘭 · 个人主页</title>
-<meta name="description" content="AceIce | 祈蘭 的个人主页：在读大学生 · 音游苦手 · 昼伏夜出爱好者 · 白毛控。" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceIce | 祈蘭 — 入口</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%A6%96%3C/text%3E%3C/svg%3E" />
+<meta name="description" content="AceIce | 祈蘭 的个人主页入口页，点中间按钮进入主页。">
 <style>
-/* ============================================================
-   个人主页样式 —— 单文件版（改内容看正文，改配色看 :root）
-   ============================================================ */
-:root {
-  --bg: #f7f7f7;                      /* 页面底色：小恐龙游戏经典底色 */
-  --ink: #535353;                     /* 主色：恐龙、边框、文字 */
-  --card: rgba(255, 255, 255, 0.95);  /* 面板底色 */
-  --muted: #8f8f8f;                   /* 次要文字 */
-  --line: rgba(83, 83, 83, 0.4);      /* 地面线等装饰线 */
-}
-body.night {
-  --bg: #191919;
-  --ink: #e9e9e9;
-  --card: rgba(30, 30, 36, 0.95);
-  --muted: #9a9a9a;
-  --line: rgba(233, 233, 233, 0.38);
-}
+  /* ============================================================
+   * 简略版首页：只放头像、名字、状态和一个「进入主页」按钮
+   * 主页是 home.html，点按钮就跳过去
+   * 白天 / 黑夜跟随主页里设置过的主题（localStorage 里的 dino-theme）
+   * ============================================================ */
+  :root {
+    --bg: #f4f4f1;
+    --card: #ffffff;
+    --ink: #1f1f1f;
+    --muted: #8f8f8f;
+    --line: #cfcfcf;
+  }
+  body.night {
+    --bg: #1a1a1a;
+    --card: #262626;
+    --ink: #e9e9e9;
+    --muted: #9a9a9a;
+    --line: #5a5a5a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 32px 24px;
+    background: var(--bg);
+    color: var(--ink);
+    text-align: center;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    transition: background 0.4s ease, color 0.4s ease;
+    overflow: hidden;
+  }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
-  min-height: 100vh;
-  overflow-x: hidden;
-  transition: background 0.3s ease, color 0.3s ease;
-}
+  /* 背景：一条很低调的地平线 + 会飘的云 */
+  .sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .cloud {
+    position: absolute;
+    width: 68px; height: 22px;
+    background: var(--line);
+    border-radius: 999px;
+    opacity: 0.35;
+    animation: drift 60s linear infinite;
+  }
+  .cloud::before, .cloud::after {
+    content: ""; position: absolute; background: inherit; border-radius: 50%;
+  }
+  .cloud::before { width: 26px; height: 26px; top: -12px; left: 12px; }
+  .cloud::after  { width: 18px; height: 18px; top: -8px;  left: 38px; }
+  @keyframes drift {
+    from { transform: translateX(-20vw); }
+    to   { transform: translateX(115vw); }
+  }
+  .ground {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 2px;
+    background: var(--line); opacity: 0.8; z-index: 0;
+  }
 
-/* ---------- 背景场景：小恐龙低调地一直在跑（固定层，不抢戏） ---------- */
-#scene {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-#ground {
-  position: absolute;
-  left: 0; right: 0;
-  bottom: 10vh;
-  height: 2px;
-  background: var(--line);
-}
-#dino-runner {
-  position: absolute;
-  left: 10vw;
-  bottom: 10vh;
-  will-change: transform;
-  opacity: 0.75;
-}
-.dino-jump { position: relative; }
-.dino-sprite {
-  display: block;
-  width: 88px;
-  height: 94px;
-  image-rendering: pixelated;
-}
-.cactus-img {
-  position: absolute;
-  left: 0;
-  bottom: 10vh;
-  width: 34px;
-  height: 70px;
-  image-rendering: pixelated;
-  opacity: 0.65;
-  will-change: transform;
-}
-.cloud-img {
-  position: absolute;
-  left: 0;
-  width: 92px;
-  height: 28px;
-  opacity: 0.85;
-  animation: drift linear infinite;
-}
-@keyframes drift {
-  from { transform: translateX(-25vw); }
-  to   { transform: translateX(110vw); }
-}
-/* 黑夜模式：像原版游戏一样给贴图整体反色 */
-body.night #dino-runner,
-body.night .cactus-img,
-body.night .cloud-img { filter: invert(1); }
+  .card-wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    animation: enter 0.8s cubic-bezier(0.2, 0.75, 0.3, 1);
+  }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: none; }
+  }
 
-/* 左上角欢迎语 */
-#welcome {
-  position: fixed;
-  top: 20px;
-  left: 24px;
-  z-index: 2;
-  font-size: 14px;
-  letter-spacing: 1px;
-  color: var(--ink);
-  opacity: 0.75;
-  pointer-events: none;
-  user-select: none;
-  transition: color 0.3s ease;
-}
+  .avatar {
+    width: 120px; height: 120px;
+    border: 3px solid var(--ink);
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--card);
+    margin-bottom: 22px;
+    animation: bob 4s ease-in-out infinite;
+  }
+  .avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
 
-/* 左上角实时时钟 */
-#clock {
-  position: fixed;
-  top: 44px;
-  left: 24px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: var(--ink);
-  opacity: 0.75;
-  pointer-events: none;
-  user-select: none;
-  transition: color 0.3s ease;
-}
-#clock-time {
-  font-family: "Cascadia Mono", "Consolas", "Courier New", monospace;
-  font-size: 20px;
-  letter-spacing: 2px;
-}
-#clock-date {
-  font-size: 11px;
-  letter-spacing: 1px;
-}
+  h1 {
+    margin: 0 0 10px;
+    font-size: 30px;
+    letter-spacing: 2px;
+  }
+  .tagline {
+    margin: 0 0 22px;
+    min-height: 27px;
+    font-size: 14px;
+    line-height: 1.9;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  /* 打字机的光标 */
+  .caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 2px;
+    background: var(--muted);
+    vertical-align: -2px;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 
-/* ---------- 白天 / 黑夜按钮 ---------- */
-#theme-toggle {
-  position: fixed;
-  top: 16px; right: 20px;
-  z-index: 3;
-  width: 44px; height: 44px;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: var(--card);
-  color: var(--ink);
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.3s ease, border-color 0.3s ease;
-}
-#theme-toggle:hover { transform: scale(1.08); }
-#theme-toggle:active { transform: scale(0.94); }
+  /* 在线 / 离线小框（和主页那个同款） */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 30px;
+    padding: 8px 18px;
+    border: 2px dashed var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+  }
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    background: var(--muted);
+  }
+  .status-dot.online {
+    background: #2ecc71;
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.25);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  .status-dot.offline { background: #e74c3c; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.22); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.25); }
+    50%      { box-shadow: 0 0 0 6px rgba(46, 204, 113, 0.10); }
+  }
 
-/* ---------- 页面主体（可下拉） ---------- */
-.page { position: relative; z-index: 1; }
+  /* 中间那个「进入主页」按钮 */
+  .enter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 42px;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    animation: breathe 3s ease-in-out infinite;
+  }
+  .enter-btn:hover,
+  .enter-btn:focus-visible {
+    background: var(--card);
+    color: var(--ink);
+    transform: translateY(-3px) scale(1.03);
+  }
+  .enter-btn:active { transform: translateY(0) scale(0.98); }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(127, 127, 127, 0.35); }
+    50%      { box-shadow: 0 0 0 12px rgba(127, 127, 127, 0); }
+  }
+  .hint {
+    margin: 26px 0 0;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
 
-/* 第一屏：头像 + 简介 + 社交图标 */
-.hero {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 110px 24px 24px;
-  animation: hero-in 0.7s ease;
-}
-@keyframes hero-in {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: none; }
-}
-.avatar {
-  width: 148px; height: 148px;
-  margin-bottom: 30px;
-  display: grid;
-  place-items: center;
-  font-size: 60px;
-  background: var(--bg);
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  overflow: hidden;
-  transition: background 0.3s ease, border-color 0.3s ease;
-}
-img.avatar { display: block; object-fit: cover; }
-.hero h1 {
-  margin: 0 0 12px;
-  font-size: 32px;
-  letter-spacing: 2px;
-}
-.tagline {
-  margin: 0 0 30px;
-  max-width: 430px;
-  font-size: 16px;
-  line-height: 1.8;
-  color: var(--muted);
-}
+  /* ---------- 轻量粒子：漂浮星光 + 点击爆发 ---------- */
+  .glow {
+    position: fixed;
+    z-index: 0;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: 0.25;
+    pointer-events: none;
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    from { transform: translateY(0) scale(1); opacity: 0; }
+    15%  { opacity: 0.3; }
+    85%  { opacity: 0.2; }
+    to   { transform: translateY(-90vh) scale(0.5); opacity: 0; }
+  }
+  /* 点击粒子：参数和大主页完全一致（12 颗 / 18~34px / 飞散 64px / 放大到 1.6 倍） */
+  .spark {
+    position: fixed;
+    z-index: 9;
+    pointer-events: none;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--ink);
+    /* 加一点光晕，让星星在白底 / 黑底上都看得清 */
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.18), 0 0 14px currentColor;
+    will-change: transform, opacity;
+    animation: spark-fly 1s cubic-bezier(0.1, 0.7, 0.4, 1) forwards;
+  }
+  @keyframes spark-fly {
+    from { opacity: 1; transform: translate(-50%, -50%) scale(0.55) rotate(0deg); }
+    60%  { opacity: 1; }
+    to   { opacity: 0; transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, -34px)) scale(1.6) rotate(var(--sr, 0deg)); }
+  }
+  /* 点一下按钮，整页轻轻"弹"一下 */
+  .card-wrap.pop { animation: pop 0.5s ease; }
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(0.975); }
+    70%  { transform: scale(1.012); }
+    100% { transform: scale(1); }
+  }
 
-/* 社交图标：X / GitHub（点击跳转主页） + QQ 号（点击复制） */
-.socials {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-.social {
-  width: 54px; height: 54px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: var(--card);
-  color: var(--ink);
-  text-decoration: none;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-}
-.social svg { width: 26px; height: 26px; fill: currentColor; display: block; }
-.social:hover { background: var(--ink); color: var(--bg); transform: translateY(-3px); }
-.social.qq {
-  width: auto; height: 54px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 22px 0 15px;
-  border-radius: 999px;
-  font-family: "Cascadia Mono", "Consolas", monospace;
-  font-size: 16px;
-  letter-spacing: 1px;
-  cursor: pointer;
-}
-.social.qq svg { width: 24px; height: 24px; }
-.social.qq:hover { background: var(--ink); color: var(--bg); transform: translateY(-3px); }
-
-.scroll-hint {
-  margin-top: 18px;
-  font-size: 13px;
-  letter-spacing: 2px;
-  color: var(--muted);
-  animation: float 1.8s ease-in-out infinite;
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(6px); }
-}
-
-/* 第二屏：我的项目 */
-.projects, .sites, .doing, .fun {
-  max-width: 860px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 10px 24px 80px;
-}
-.doing, .fun { padding-bottom: 30px; }
-.projects h2, .sites h2, .doing h2 {
-  margin: 0 0 10px;
-  text-align: center;
-  font-size: 26px;
-  letter-spacing: 3px;
-}
-.projects h2::after, .sites h2::after, .doing h2::after {
-  content: "";
-  display: block;
-  width: 44px; height: 2px;
-  margin: 12px auto 0;
-  background: var(--line);
-}
-.projects .sub, .sites .sub, .doing .sub {
-  margin: 0 0 30px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--muted);
-}
-.project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 18px;
-}
-.empty-card {
-  grid-column: 1 / -1;
-  padding: 52px 24px;
-  text-align: center;
-  border: 2px dashed var(--line);
-  border-radius: 18px;
-  background: var(--card);
-}
-.empty-emoji { display: block; font-size: 46px; margin-bottom: 12px; }
-.empty-card p { margin: 6px 0; font-size: 18px; }
-.empty-card .empty-sub { font-size: 13px; color: var(--muted); }
-
-/* 项目卡片模板（以后有项目了就按这个格式加） */
-.project-card {
-  display: block;
-  padding: 20px 22px;
-  border: 2px solid var(--ink);
-  border-radius: 16px;
-  background: var(--card);
-  color: var(--ink);
-  text-decoration: none;
-  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
-}
-.project-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
-.project-card h3 { margin: 0 0 8px; font-size: 18px; }
-.project-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
-.project-card:hover p { color: var(--bg); }
-
-/* 第三屏：有趣的网站卡片 */
-.site-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-.site-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 18px;
-  border: 2px dashed var(--line);
-  border-radius: 16px;
-  background: var(--card);
-  color: var(--ink);
-  text-decoration: none;
-  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
-}
-.site-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
-.site-icon {
-  flex: 0 0 auto;
-  width: 64px; height: 64px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: var(--bg);
-  overflow: hidden;
-}
-.site-icon img { width: 100%; height: 100%; object-fit: contain; }
-.site-icon img.icon-cover { object-fit: cover; }
-.site-icon-emoji { font-size: 42px; }
-.site-info h3 { margin: 0 0 6px; font-size: 17px; }
-.site-info p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
-.site-card:hover .site-info p { color: var(--bg); }
-
-/* 最近在做：进行中事项卡片（虚线边框，和「我的项目」占位卡一致） */
-.doing-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  max-width: 860px;
-  margin: 0 auto;
-}
-.doing-col {
-  display: flex;
-  flex-direction: column;
-}
-.doing-card, .music-card { flex: 1; width: 100%; }
-.doing-card {
-  padding: 22px 28px;
-  border: 2px dashed var(--line);
-  border-radius: 16px;
-  background: var(--card);
-  transition: background 0.3s ease, border-color 0.3s ease;
-}
-.doing-item {
-  font-size: 15px;
-  line-height: 1.9;
-  color: var(--ink);
-}
-
-/* 听首歌吧：音乐卡片 + 选歌弹窗 */
-.music-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 26px 20px;
-  border: 2px dashed var(--line);
-  border-radius: 16px;
-  background: var(--card);
-  color: var(--ink);
-  cursor: pointer;
-  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
-}
-.music-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
-.music-icon { font-size: 40px; }
-.music-name { font-size: 17px; }
-.music-hint { font-size: 12px; color: var(--muted); }
-.music-card:hover .music-hint { color: var(--bg); }
-
-/* 旋转封面圆盘（有封面显示封面，无封面用渐变 + 🎵 占位） */
-.vinyl-wrap {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-.disc {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #4a505c, #1c1e24 70%);
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(255, 255, 255, 0.08);
-  display: grid;
-  place-items: center;
-  animation: vinyl-spin 8s linear infinite;
-  animation-play-state: paused;
-}
-.disc.playing { animation-play-state: running; }
-@keyframes vinyl-spin {
-  to { transform: rotate(360deg); }
-}
-.disc-note {
-  font-size: 34px;
-  pointer-events: none;
-}
-.disc::after {
-  content: "";
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--card);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
-}
-/* 进度条：拖动跳转播放位置 */
-.music-time {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 320px;
-  margin: 0 auto 14px;
-  font-family: "Cascadia Mono", "Consolas", monospace;
-  font-size: 12px;
-  color: var(--muted);
-}
-.music-seek {
-  flex: 1;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--line);
-  outline: none;
-  cursor: pointer;
-}
-.music-seek::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--ink);
-  border: 2px solid var(--card);
-  cursor: pointer;
-}
-.music-seek::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--ink);
-  border: 2px solid var(--card);
-  cursor: pointer;
-}
-.music-mode {
-  position: relative;
-  flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.mode-icon {
-  width: 15px;
-  height: 15px;
-  display: block;
-}
-.music-mode:hover { background: var(--ink); color: var(--bg); }
-.music-mode.loop { background: var(--ink); color: var(--bg); }
-.music-mode.loop::after {
-  content: "1";
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--bg);
-  color: var(--ink);
-  border: 1px solid var(--ink);
-  font-size: 9px;
-  font-weight: bold;
-  line-height: 11px;
-  text-align: center;
-}
-
-.music-overlay, .about-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-.music-overlay.open, .about-overlay.open { opacity: 1; pointer-events: auto; }
-.music-panel, .about-panel {
-  position: relative;
-  width: min(92vw, 420px);
-  max-height: 80vh;
-  overflow: auto;
-  padding: 30px 26px 22px;
-  border: 2px solid var(--ink);
-  border-radius: 18px;
-  background: var(--card);
-  color: var(--ink);
-  text-align: center;
-  transform: scale(0.85);
-  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-}
-.music-overlay.open .music-panel,
-.about-overlay.open .about-panel { transform: scale(1); }
-.music-panel h3, .about-panel h3 { margin: 0 0 16px; font-size: 20px; }
-.about-avatar {
-  width: 88px;
-  height: 88px;
-  margin: 0 auto 14px;
-  display: block;
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg);
-}
-.music-close, .about-close {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  border: none;
-  background: none;
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--ink);
-}
-.music-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.music-play {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  background: transparent;
-  color: var(--ink);
-  font-size: 15px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.music-play:hover { background: var(--ink); color: var(--bg); }
-.music-tip { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
-
-/* 关于我弹窗：标签 + 长简介预留区 */
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-.tag {
-  padding: 6px 14px;
-  font-size: 14px;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  color: var(--ink);
-  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-}
-.tag:hover { background: var(--ink); color: var(--bg); transform: translateY(-2px); }
-.about-intro {
-  margin-top: 18px;
-  padding: 16px;
-  border: 2px dashed var(--line);
-  border-radius: 12px;
-  text-align: left;
-}
-.about-intro-title { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
-.about-intro-text {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.8;
-  color: var(--ink);
-  min-height: 60px;
-}
-
-footer {
-  position: relative;
-  z-index: 1;
-  padding: 0 24px 30px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-/* 复制 QQ 号的提示气泡 */
-#toast {
-  position: fixed;
-  left: 50%;
-  bottom: 100px;
-  transform: translateX(-50%) translateY(16px);
-  padding: 9px 20px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--bg);
-  font-size: 14px;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 5;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* ---------- 小屏幕适配 ---------- */
-@media (max-width: 560px) {
-  .avatar { width: 112px; height: 112px; }
-  .hero h1 { font-size: 26px; }
-  .site-grid { grid-template-columns: 1fr; }
-  /* 手机端：左上角欢迎语与时钟整体缩小靠边，避免拥挤 */
-  #welcome { top: 14px; left: 14px; font-size: 12px; }
-  #clock { top: 34px; left: 14px; }
-  #clock-time { font-size: 13px; }
-  #clock-date { font-size: 10px; }
-  /* 最近在做 / 听首歌吧 上下堆叠 */
-  .doing-row { grid-template-columns: 1fr; }
-}
+  @media (max-width: 480px) {
+    h1 { font-size: 24px; }
+    .avatar { width: 100px; height: 100px; }
+    .enter-btn { padding: 14px 32px; font-size: 15px; letter-spacing: 2px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cloud, .avatar, .enter-btn, .card-wrap { animation: none !important; }
+  }
 </style>
 </head>
 <body>
 
-  <!-- ============ 背景场景（固定层：小恐龙一直跑，遇到仙人掌自动跳，纯装饰） ============ -->
-  <div id="scene" aria-hidden="true">
-    <div id="ground"></div>
-    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 8%; animation-duration: 90s;">
-    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 20%; animation-duration: 130s; animation-delay: -30s;">
-    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 4%; animation-duration: 70s; animation-delay: -60s;">
-    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 24vw;">
-    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 44vw;">
-    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 64vw;">
-    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 84vw;">
-    <div id="dino-runner">
-      <div class="dino-jump" id="dino-jump">
-        <img id="dino-sprite" class="dino-sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAvCAYAAACYECivAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADxSURBVGhD7ZBBDsMwCATzR///HT62l1K1IyPsgp06YaS9xMCOchyTqLU+IsP74bDQG94Pg0WlFFdSmESJMtPENWGB33uTwoIm7E0KCyn8SgoLlxeW+d6wz80yYfWhE+5TbDSmBwv5bsF9CoxG9WCBOtiAkiOi3NPCzusL8+Dn7kh4w+p9w1JrkQWnC1sHtXlv7ifMQ9bcaHjvvsKzwh+RwtHpFiTbCQurxbcRdouS2eIpLESLy70UJl7xZaLCtsKWeM8cZ9gVAksoocnwvTXDrlA0EZZTqpXvy5PYXnhp+S9sL/z34tsKa+H86VCQ4fwsnnT+os73N24AAAAAAElFTkSuQmCC" alt="奔跑的小恐龙">
-      </div>
-    </div>
+  <!-- 背景装饰：两朵云 + 一条地平线 -->
+  <div class="sky" aria-hidden="true">
+    <div class="cloud" style="top: 16%; animation-duration: 62s;"></div>
+    <div class="cloud" style="top: 34%; animation-duration: 95s; animation-delay: -40s; opacity: 0.22;"></div>
   </div>
+  <div class="ground" aria-hidden="true"></div>
 
-  <!-- 左上角欢迎语 -->
-  <div id="welcome" aria-hidden="true">Personal Homepage</div>
-
-  <!-- 左上角实时时钟 -->
-  <div id="clock" aria-hidden="true">
-    <span id="clock-time">--:--:--</span>
-    <span id="clock-date">--月--日 周-</span>
-  </div>
-
-  <button id="theme-toggle" type="button" title="切换白天 / 黑夜">🌙</button>
-
-  <main class="page">
-
-    <!-- ============ 第一部分：关于我（改内容主要都在这里） ============ -->
-    <section class="hero">
-      <!-- 头像：想换照片时，替换下面的 src 即可 -->
-      <img class="avatar" src="avatar.png" alt="AceIce | 祈蘭 的头像">
-
-      <h1>AceIce | 祈蘭</h1>
-
-      <p class="tagline">
-        在读大学生<br>
-        音游苦手 昼伏夜出爱好者 白毛控
-      </p>
-
-      <!-- 社交账号：X 和 GitHub 已填好，QQ 号待填 -->
-      <div class="socials">
-        <a class="social" href="https://x.com/aliang1666" target="_blank" rel="noopener" aria-label="X（Twitter）" title="X（Twitter）">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
-        </a>
-        <a class="social" href="https://github.com/AceIce1666" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-        </a>
-        <button class="social qq" id="qq-btn" type="button" data-qq="227015198" title="点击复制 QQ 号" aria-label="QQ 号 227015198，点击复制">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.395 15.035a40 40 0 0 0-.803-2.264l-1.079-2.695c.001-.032.014-.562.014-.836C19.526 4.632 17.351 0 12 0S4.474 4.632 4.474 9.241c0 .274.013.804.014.836l-1.08 2.695a39 39 0 0 0-.802 2.264c-1.021 3.283-.69 4.643-.438 4.673.54.065 2.103-2.472 2.103-2.472 0 1.469.756 3.387 2.394 4.771-.612.188-1.363.479-1.845.835-.434.32-.379.646-.301.778.343.578 5.883.369 7.482.189 1.6.18 7.14.389 7.483-.189.078-.132.132-.458-.301-.778-.483-.356-1.233-.646-1.846-.836 1.637-1.384 2.393-3.302 2.393-4.771 0 0 1.563 2.537 2.103 2.472.251-.03.581-1.39-.438-4.673"/></svg>
-          <span class="qq-num">227015198</span>
-        </button>
-      </div>
-
-      <div class="scroll-hint" aria-hidden="true">▼ 往下滑，看看我的项目</div>
-    </section>
-
-    <!-- ============ 第二部分：我的项目 ============ -->
-    <section class="projects" id="projects">
-      <h2>我的项目</h2>
-      <p class="sub">做过 / 正在做的项目，都会放在这里</p>
-
-      <div class="project-grid">
-        <!-- 现在还没有项目，先放占位卡片 -->
-        <div class="empty-card">
-          <span class="empty-emoji">🐾</span>
-          <p>目前空空如也喵~</p>
-          <p class="empty-sub">等我做出第一个项目，就挂在这里</p>
-        </div>
-
-        <!-- 以后有项目了：把下面的注释去掉，按这个格式复制粘贴即可
-        <a class="project-card" href="https://项目链接" target="_blank" rel="noopener">
-          <h3>项目名称</h3>
-          <p>一句话介绍这个项目做了什么。</p>
-        </a>
-        -->
-      </div>
-    </section>
-
-    <!-- ============ 大栏目：最近在做 ============ -->
-    <section class="doing" id="doing">
-      <h2>最近在做</h2>
-      <p class="sub">正在进行中的二三事</p>
-      <div class="doing-card">
-        <div class="doing-item">📚 努力学习ing</div>
-        <div class="doing-item">✨ 充盈自己 · 这可是头等大事</div>
-      </div>
-    </section>
-
-    <!-- ============ 并排小栏目：听首歌吧 + 关于我（点击展开） ============ -->
-    <section class="fun" id="fun">
-      <div class="doing-row">
-        <div class="doing-col">
-          <button class="music-card" id="music-btn" type="button">
-            <span class="music-icon">🎵</span>
-            <span class="music-name">听首歌吧</span>
-            <span class="music-hint">换个音乐.换种心情</span>
-          </button>
-        </div>
-        <div class="doing-col">
-          <button class="music-card" id="about-btn" type="button">
-            <span class="music-icon">💬</span>
-            <span class="music-name">关于我</span>
-            <span class="music-hint">Get to know me!</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 选歌弹窗 -->
-    <div id="music-overlay" class="music-overlay">
-      <div class="music-panel" role="dialog" aria-label="选歌">
-        <button class="music-close" id="music-close" type="button" aria-label="关闭">✕</button>
-        <div class="vinyl-wrap">
-          <div class="disc" id="disc">
-            <span class="disc-note" id="disc-note">🎵</span>
-          </div>
-        </div>
-        <div class="music-time">
-          <span id="music-cur">0:00</span>
-          <input type="range" class="music-seek" id="music-seek" min="0" max="100" step="0.1" value="0" aria-label="播放进度">
-          <span id="music-dur">0:00</span>
-          <button class="music-mode" id="music-mode" type="button" title="切换顺序播放 / 单曲循环" aria-label="切换顺序播放 / 单曲循环">
-            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-          </button>
-        </div>
-        <ul class="music-list">
-          <li><button class="music-play" type="button" data-src="torinouta.mp3" data-cover="1.png"><span>▶</span><span>鳥の詩 · Lia</span></button></li>
-          <li><button class="music-play" type="button" data-src="tooisorahe.mp3" data-cover="2.png"><span>▶</span><span>遠い空へ · 市川淳</span></button></li>
-          <li><button class="music-play" type="button" data-src="kumoito.mp3" data-cover="3.png"><span>▶</span><span>蜘蛛糸モノポリー · sasakure.UK</span></button></li>
-          <li><button class="music-play" type="button" data-src="haruhikage.mp3" data-cover="4.png"><span>▶</span><span>春日影 · MyGO!!!!!</span></button></li>
-          <li><button class="music-play" type="button" data-src="luv-letter.mp3" data-cover="5.png"><span>▶</span><span>Luv Letter · DJ OKAWARI</span></button></li>
-        </ul>
-        <p class="music-tip">点歌播放 / 暂停，拖动进度条快进</p>
-      </div>
-    </div>
-    <audio id="music-player"></audio>
-
-    <!-- 关于我弹窗 -->
-    <div id="about-overlay" class="about-overlay">
-      <div class="about-panel" role="dialog" aria-label="关于我">
-        <button class="about-close" id="about-close" type="button" aria-label="关闭">✕</button>
-        <img class="about-avatar" src="avatar.png" alt="AceIce | 祈蘭 的头像">
-        <h3>💬 关于我</h3>
-        <div class="tag-list">
-          <span class="tag">二次元</span>
-          <span class="tag">音乐爱好者</span>
-          <span class="tag">睡懒觉</span>
-        </div>
-        <div class="about-intro">
-          <p class="about-intro-title">关于我的那些事</p>
-          <p class="about-intro-text" id="about-intro-text"> （一名普通学生 
-
-      正在努力学习中       
-
-      E 人 I 人随时切换       
-
-      日常：吃饱饭 睡大觉 打游戏   
-
-      也喜欢折腾一些感兴趣的东西 ）                 </p>
-        </div>
-      </div>
+  <main class="card-wrap">
+    <div class="avatar">
+      <img src="avatar.png" alt="AceIce | 祈蘭 的头像">
     </div>
 
-    <!-- ============ 第三部分：一些有趣的网站 ============ -->
-    <section class="sites" id="sites">
-      <h2>一些有趣的网站</h2>
-      <p class="sub">觉得好玩的网站，分享给你</p>
+    <h1>AceIce | 祈蘭</h1>
+    <p class="tagline"><span id="typed"></span><span class="caret" aria-hidden="true"></span></p>
 
-      <div class="site-grid">
-        <a class="site-card" href="https://aidn.jp/mikutap/" target="_blank" rel="noopener">
-          <div class="site-icon" aria-hidden="true">
-            <img src="miku-icon.jpg" alt="Mikutap 图标">
-          </div>
-          <div class="site-info">
-            <h3>Mikutap</h3>
-            <p>以初音未来为主题的音乐互动小玩具，点击屏幕 / 敲键盘就能即兴演奏。</p>
-          </div>
-        </a>
+    <div class="status-pill" title="网络状态">
+      <span class="status-dot online" id="status-dot"></span>
+      <span id="status-text">在线</span>
+    </div>
 
-        <a class="site-card" href="https://www.emojiall.com/zh-hans" target="_blank" rel="noopener">
-          <div class="site-icon site-icon-emoji" aria-hidden="true">😜</div>
-          <div class="site-info">
-            <h3>EmojiAll · Emoji 大全</h3>
-            <p>收录全部 Emoji 表情的含义、图片和复制玩法，找表情来这里。</p>
-          </div>
-        </a>
+    <!-- 点它就进主页 -->
+    <a class="enter-btn" href="home.html">
+      <span>进入主页</span>
+      <span aria-hidden="true">→</span>
+    </a>
 
-        <a class="site-card" href="https://www.nyan.cat/" target="_blank" rel="noopener">
-          <div class="site-icon" aria-hidden="true">
-            <img class="icon-cover" src="nyan-icon.jpg" alt="NYAN.CAT 图标">
-          </div>
-          <div class="site-info">
-            <h3>NYAN.CAT</h3>
-            <p>NYAN NYAN NYAN NYAN NYAN NYAN !</p>
-          </div>
-        </a>
-
-        <a class="site-card" href="https://ievent.life/" target="_blank" rel="noopener">
-          <div class="site-icon" aria-hidden="true">
-            <img src="ievent-icon.jpg" alt="推活日记图标">
-          </div>
-          <div class="site-info">
-            <h3>推活日记</h3>
-            <p>不管是 Live、见面会还是演出情报，都能在这里快速查看。</p>
-          </div>
-        </a>
-
-        <!-- 以后想加新网站：复制上面这张卡片，改链接、图标和文字即可 -->
-      </div>
-    </section>
-
+    <p class="hint">点击这里了解更多！</p>
   </main>
 
-  <footer>© 2026 AceIce | 祈蘭</footer>
-
-  <div id="toast" role="status"></div>
-
 <script>
-/* ---------- 左上角实时时钟（与现实时间同步） ---------- */
+/* 跟随主页里选过的主题：白天 / 黑夜 */
+try {
+  if (localStorage.getItem("dino-theme") === "night") document.body.classList.add("night");
+} catch (e) { }
+
+/* 在线 / 离线：绿灯 / 红灯 */
 try {
   (function () {
-    var timeEl = document.getElementById("clock-time");
-    var dateEl = document.getElementById("clock-date");
-    if (!timeEl || !dateEl) return;
-    var WEEK = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-    function pad(n) { return n < 10 ? "0" + n : "" + n; }
-    function tickClock() {
-      var d = new Date();
-      timeEl.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
-      dateEl.textContent = (d.getMonth() + 1) + "月" + d.getDate() + "日 " + WEEK[d.getDay()];
+    var dot = document.getElementById("status-dot");
+    var txt = document.getElementById("status-text");
+    if (!dot || !txt) return;
+    function refresh() {
+      var online = navigator.onLine !== false;
+      dot.className = "status-dot " + (online ? "online" : "offline");
+      txt.textContent = online ? "在线" : "离线";
     }
-    tickClock();
-    setInterval(tickClock, 1000);
+    refresh();
+    window.addEventListener("online", refresh);
+    window.addEventListener("offline", refresh);
   })();
-} catch (e) { /* 时钟异常忽略，不影响页面 */ }
+} catch (e) { }
 
-/* ---------- 弹窗：听首歌吧 + 关于我 ---------- */
+/* ---------- 动效：打字机 + 漂浮星光 + 点击爆发 ----------
+ * 想换打字机的句子，改下面的 LINES
+ * 想换点击特效的符号，改下面的 CHARS
+ */
 try {
   (function () {
-    function bindPopup(btnId, overlayId, closeId) {
-      var btn = document.getElementById(btnId);
-      var overlay = document.getElementById(overlayId);
-      var closeBtn = document.getElementById(closeId);
-      if (!btn || !overlay) return;
-      btn.addEventListener("click", function () { overlay.classList.add("open"); });
-      if (closeBtn) closeBtn.addEventListener("click", function () { overlay.classList.remove("open"); });
-      overlay.addEventListener("click", function (e) {
-        if (e.target === overlay) overlay.classList.remove("open");
-      });
-      document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") overlay.classList.remove("open");
-      });
-    }
-    bindPopup("music-btn", "music-overlay", "music-close");
-    bindPopup("about-btn", "about-overlay", "about-close");
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    /* 点歌播放：data-src 为音频地址，data-cover 为封面图 */
-    var player = document.getElementById("music-player");
-    var disc = document.getElementById("disc");
-    var discNote = document.getElementById("disc-note");
-    var tip = document.querySelector(".music-tip");
-    var items = document.querySelectorAll(".music-play");
-    var seek = document.getElementById("music-seek");
-    var curEl = document.getElementById("music-cur");
-    var durEl = document.getElementById("music-dur");
-    if (player) player.preload = "auto";
-
-    function setCover(url) {
-      if (disc) disc.style.backgroundImage = url ? 'url("' + url + '")' : "";
-      if (discNote) discNote.style.display = url ? "none" : "";
-    }
-    function fmt(t) {
-      if (!isFinite(t) || t < 0) return "0:00";
-      var m = Math.floor(t / 60), s = Math.floor(t % 60);
-      return m + ":" + (s < 10 ? "0" : "") + s;
-    }
-    function currentSrc() {
-      return (player.currentSrc || player.src || "").split("/").pop();
-    }
-    function updateSongIcons() {
-      var cur = currentSrc();
-      items.forEach(function (it) {
-        var src = it.getAttribute("data-src");
-        var icon = it.querySelector("span");
-        if (icon) {
-          icon.textContent = (src === cur && !player.paused) ? "⏸" : "▶";
-        }
-      });
-    }
-    items.forEach(function (it) {
-      it.addEventListener("click", function () {
-        var src = it.getAttribute("data-src");
-        var cover = it.getAttribute("data-cover") || "";
-        if (!src) {
-          if (tip) tip.textContent = "这首歌还没上传，敬请期待～";
-          return;
-        }
-        /* 点击同一首歌：暂停 / 继续 */
-        if (currentSrc() === src) {
-          if (player.paused) { player.play(); } else { player.pause(); }
-          updateSongIcons();
-          return;
-        }
-        /* 换歌：切换封面并播放 */
-        setCover(cover);
-        player.src = src;
-        var p = player.play();
-        if (p && p.catch) {
-          p.catch(function () {
-            if (tip) tip.textContent = "播放失败：请确认歌曲文件存在（torinouta.mp3 / tooisorahe.mp3）";
-          });
-        }
-        updateSongIcons();
-      });
-    });
-    if (seek) {
-      seek.addEventListener("input", function () {
-        if (!player.duration) return;
-        player.currentTime = (parseFloat(seek.value) / 100) * player.duration;
-        if (curEl) curEl.textContent = fmt(player.currentTime);
-      });
-    }
-    player.addEventListener("loadedmetadata", function () {
-      if (durEl) durEl.textContent = fmt(player.duration);
-      updateSongIcons();
-    });
-    player.addEventListener("timeupdate", function () {
-      if (seek && player.duration) {
-        seek.value = (player.currentTime / player.duration) * 100;
-      }
-      if (curEl) curEl.textContent = fmt(player.currentTime);
-    });
-    player.addEventListener("play", function () { if (disc) disc.classList.add("playing"); updateSongIcons(); });
-    player.addEventListener("pause", function () { if (disc) disc.classList.remove("playing"); updateSongIcons(); });
-    /* 播放模式：顺序播放 / 单曲循环（角标 "1" 由 CSS 显示） */
-    var loopMode = false;
-    var modeBtn = document.getElementById("music-mode");
-    if (modeBtn) {
-      modeBtn.addEventListener("click", function () {
-        loopMode = !loopMode;
-        if (loopMode) {
-          modeBtn.classList.add("loop");
-          if (typeof toast === "function") toast("♪ 单曲循环");
-        } else {
-          modeBtn.classList.remove("loop");
-          if (typeof toast === "function") toast("♪ 顺序播放");
-        }
-      });
-    }
-    player.addEventListener("ended", function () {
-      if (disc) disc.classList.remove("playing");
-      if (loopMode) {
-        /* 单曲循环：从头重播 */
-        player.currentTime = 0;
-        player.play();
-        updateSongIcons();
-        return;
-      }
-      /* 顺序播放：自动切下一首 */
-      var cur = currentSrc();
-      var idx = -1;
-      items.forEach(function (it, i) {
-        if (it.getAttribute("data-src") === cur) idx = i;
-      });
-      if (idx >= 0) {
-        var next = items[(idx + 1) % items.length];
-        var src2 = next.getAttribute("data-src");
-        var cover2 = next.getAttribute("data-cover") || "";
-        if (src2) {
-          setCover(cover2);
-          player.src = src2;
-          player.play();
-        }
-      }
-      updateSongIcons();
-    });
-    player.addEventListener("error", function () {
-      if (disc) disc.classList.remove("playing");
-      updateSongIcons();
-      if (tip) tip.textContent = "音频加载失败：请确认歌曲文件和 index.html 在同一个文件夹里";
-    });
-    updateSongIcons();
-  })();
-} catch (e) { /* 弹窗模块异常忽略 */ }
-
-/* ============================================================
- * 背景小恐龙（Chromium 开源版 T-Rex Runner 原版贴图与物理）
- * 贴图已静态写在 HTML 的 <img> 里：即使脚本不运行也有恐龙。
- * 这里只负责奔跑、换帧与自动跳跃，整体包在 try 中，
- * 任何异常都不影响页面其他功能。
- * ============================================================ */
-try {
-  (function () {
-    var runner = document.getElementById("dino-runner");
-    var dinoEl = document.getElementById("dino-sprite");
-    var cactusImgs = document.querySelectorAll(".cactus-img");
-    if (!runner || !dinoEl) return;
-
-    var SPR_STAND = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAvCAYAAACYECivAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAD+SURBVGhD7ZBBDsJQCAV7x97/HF3qRoyZSACBb9oyydv0A2/SbWviOI5HZXi/HBZmw/tlsGjf91RGmFSJMm3imrDA796MsKAJZzPCwgi/MsLC5YVl3hv2pVkmrD444T7FojE9WMh3C+5TIBrVgwXq4BcoGRHlnhZ2Xl+YBz93I+ENq/cNS61FFvxd2DqozWdzP2Eesuai4b37CneFP2KEq+MWJKcTFlaLn0Y4LUq6xUdYqBaXeyNMsuLLRIXTClvi2jv3eb8cFlKIYtr3ZcKCJaTN8X0ZFNGEOMf3ZXhFvHPteEW8c+1QRBPyzrXjFfHOtSOFWqJz7bCYic79yhMOXgR1uLNFAQAAAABJRU5ErkJggg==";
-    var SPR_RUN2 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAvCAYAAACYECivAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADxSURBVGhD7ZBBDsMwCATzR///HTm2lxJVoyKMgKROGGkvAbOjbFsR+76/MsP76bAwGt5Pg0VjjFBamGSJMmXimrDA77NpYUETjqaFhRb+pIWF2wvL/mzYF+Y0YXUwCd9TzBvTg4WcW/A9BbxRPVigLv6Akh5RvtPCzvsL8+D3W094w+o9YKn1kAWXC1sHtf1onifMQ9aeN7z3XOGq8Ee0cHamBclywsLZ4ssIh0VJtXgLC9nicq+FSVT8NFFhWWFN3Dvn/XRYaAlZc94vg8WWGL/zXjmaEMU4v0xYoBiFWrgaCv+9+LLCWrh/ORRkuO/lDWBRtjYcljbpAAAAAElFTkSuQmCC";
-    var SPR_RUN1 = dinoEl.getAttribute("src");   /* 静态帧，来自 HTML */
-
-    /* 预加载换帧图片，避免闪动 */
-    [SPR_STAND, SPR_RUN2].forEach(function (uri) {
-      var im = new Image();
-      im.src = uri;
-    });
-
-    /* ===== 照搬原版架构：恐龙固定在原地跑，世界（仙人掌）向左滚动 ===== */
-    var DINO_X = window.innerWidth * 0.12;   /* 恐龙固定横坐标（类似原版 x=50） */
-    var speed = 360;                         /* px/s（原版最低速 6px/帧 = 360px/s） */
-    var LEAD = 36;
-    var jumping = false;
-    var frameTimer = 0;
-    var runFrame = false;
-    var lastTime = performance.now();
-
-    /* 原版跳跃物理（Trex.config + updateJump 原版数值） */
-    var GRAVITY = 0.6;
-    var JUMP_VELOCITY_BASE = 10;
-    var MIN_JUMP_HEIGHT = 30;
-    var MAX_JUMP_HEIGHT = 63;
-    var DROP_VELOCITY = -5;
-    var yPos = 0;
-    var jumpVelocity = 0;
-    var reachedMinHeight = false;
-
-    /* 碰撞惩罚：被仙人掌扎到 → 画面回退一段 + 恐龙抖动 → 重新跳跃 */
-    var HIT_REWIND_DIST = 140;   /* 回退距离（px） */
-    var HIT_REWIND_SPEED = 300;  /* 回退速度（px/s） */
-    var hit = { active: false, left: 0, timer: 0 };
-
-    /* 4 棵仙人掌：横坐标由 JS 驱动，从右向左滚动，
-       出左边界后回到队尾（原版障碍物回收机制） */
-    var cacti = [];
-    var spacing = 0;
-    function layoutCacti() {
-      /* 仙人掌间距必须大于「腾空时间 × 速度」，否则前一颗还没落地、
-         下一颗就到跟前，恐龙会来不及跳（手机窄屏尤其明显） */
-      spacing = Math.max(280, (window.innerWidth - DINO_X - 60 + 160) / 4);
-      runner.style.left = DINO_X + "px";
-      for (var i = 0; i < cacti.length; i++) {
-        cacti[i].x = DINO_X + 220 + i * spacing;
-        cacti[i].cleared = false;
-        /* 用 transform 移动（GPU 合成），避免每帧改 left 触发重排 */
-        cacti[i].el.style.left = "0px";
-        cacti[i].el.style.transform = "translateX(" + cacti[i].x + "px)";
-      }
-    }
-    cactusImgs.forEach(function (el) {
-      cacti.push({ el: el, x: 0, cleared: false });
-    });
-    layoutCacti();
-
-    function startJump() {
-      if (jumping || hit.active) return;
-      jumping = true;
-      reachedMinHeight = false;
-      jumpVelocity = -(JUMP_VELOCITY_BASE + speed / 600);
-      dinoEl.src = SPR_STAND;
-    }
-
-    function updateJump(framesElapsed) {
-      yPos += jumpVelocity * framesElapsed;
-      jumpVelocity += GRAVITY * framesElapsed;
-      if (yPos < -MIN_JUMP_HEIGHT) reachedMinHeight = true;
-      if (yPos < -MAX_JUMP_HEIGHT && reachedMinHeight && jumpVelocity < DROP_VELOCITY) {
-        jumpVelocity = DROP_VELOCITY;
-      }
-      if (yPos > 0) {
-        yPos = 0;
-        jumpVelocity = 0;
-        jumping = false;
-        runFrame = false;
+    /* ---- 打字机：一句话一个字一个字打出来，打完停一下擦掉换下一句 ---- */
+    var LINES = [
+      "在读大学生 · 昼伏夜出爱好者",
+      "爱折腾一些感兴趣的小东西",
+      "欢迎来我的主页逛逛 ✦"
+    ];
+    var out = document.getElementById("typed");
+    if (out) {
+      if (reduce) {
+        out.textContent = LINES[0];
+      } else {
+        var li = 0, ci = 0, deleting = false;
+        (function tick() {
+          var line = LINES[li];
+          out.textContent = line.slice(0, ci);
+          var wait = deleting ? 40 : 95;
+          if (!deleting) {
+            if (ci < line.length) { ci++; }
+            else { deleting = true; wait = 1500; }          /* 打完停一下 */
+          } else {
+            if (ci > 0) { ci--; }
+            else { deleting = false; li = (li + 1) % LINES.length; wait = 320; }
+          }
+          setTimeout(tick, wait);
+        })();
       }
     }
 
-    document.addEventListener("keydown", function (e) {
-      if (e.code === "Space" || e.code === "ArrowUp" || e.keyCode === 32 || e.keyCode === 38) {
-        e.preventDefault();
-        startJump();
+    /* ---- 点击 / 拖动的小星星 ---- */
+    var CHARS = ["✦", "✧", "·", "✳", "⋆"];
+    var lastSpawn = 0;
+    function burst(x, y, count, spread) {
+      if (reduce) return;
+      count = count || 12; spread = spread || 64;
+      for (var i = 0; i < count; i++) {
+        var s = document.createElement("span");
+        s.className = "spark";
+        s.textContent = CHARS[i % CHARS.length];
+        var ang = (Math.PI * 2 * i) / count + Math.random() * 0.7;
+        var dist = spread * (0.6 + Math.random() * 0.9);
+        s.style.left = x + "px";
+        s.style.top = y + "px";
+        s.style.setProperty("--sx", Math.round(Math.cos(ang) * dist) + "px");
+        s.style.setProperty("--sy", Math.round(Math.sin(ang) * dist) + "px");
+        s.style.setProperty("--sr", Math.round((Math.random() - 0.5) * 260) + "deg");
+        s.style.fontSize = (18 + Math.random() * 16).toFixed(1) + "px";
+        s.style.opacity = (0.85 + Math.random() * 0.15).toFixed(2);
+        document.body.appendChild(s);
+        (function (node) {
+          setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, 1100);
+        })(s);
+      }
+    }
+    document.addEventListener("click", function (e) {
+      /* 和大主页一样：12 颗、飞散 64px */
+      burst(e.clientX, e.clientY, 12, 64);
+      var wrap = document.querySelector(".card-wrap");
+      if (wrap && !reduce) {
+        wrap.classList.remove("pop");
+        void wrap.offsetWidth;      /* 重排一下让动画能重复播放 */
+        wrap.classList.add("pop");
       }
     });
-
-    /* 手机适配：点屏幕任意空白处让恐龙跳一下（点链接/按钮不受影响） */
-    document.addEventListener("touchstart", function (e) {
-      var t = e.target;
-      if (t && (t.tagName === "A" || t.tagName === "BUTTON")) return;
-      startJump();
+    document.addEventListener("pointermove", function (e) {
+      if (e.pointerType === "mouse" && e.buttons !== 1) return;
+      if (e.pointerType !== "mouse" && e.pressure === 0) return;
+      var now = Date.now();
+      if (now - lastSpawn < 85) return;
+      lastSpawn = now;
+      burst(e.clientX, e.clientY, 1, 22);
     }, { passive: true });
 
-    function updateSpeed() {
-      speed = Math.max(360, window.innerWidth * 0.15);
-      LEAD = 0.1 * speed;
+    /* ---- 漂浮星光：慢慢往上飘的小点，给首屏一点生气 ---- */
+    if (!reduce) {
+      var n = 14;
+      for (var i = 0; i < n; i++) {
+        var g = document.createElement("span");
+        g.className = "glow";
+        g.style.left = (Math.random() * 100).toFixed(2) + "vw";
+        g.style.top = (70 + Math.random() * 30).toFixed(2) + "vh";
+        g.style.animationDuration = (11 + Math.random() * 12).toFixed(1) + "s";
+        g.style.animationDelay = (-Math.random() * 20).toFixed(1) + "s";
+        g.style.width = g.style.height = (2 + Math.random() * 4).toFixed(1) + "px";
+        document.body.appendChild(g);
+      }
     }
-
-    function tick(now) {
-      try {
-        var dt = Math.min(0.05, (now - lastTime) / 1000);
-        lastTime = now;
-
-        /* 世界滚动：正常向左；被扎到后短暂向右回退 */
-        var scrollStep = speed * dt;
-        if (hit.active) {
-          var rewind = Math.min(hit.left, HIT_REWIND_SPEED * dt);
-          hit.left -= rewind;
-          hit.timer += dt;
-          scrollStep = -rewind;   /* 负值 = 向右回退 */
-          if (hit.left <= 0) hit.active = false;
-        }
-        for (var i = 0; i < cacti.length; i++) {
-          var c = cacti[i];
-          c.x -= scrollStep;
-          if (c.x < -50) {
-            c.x += 4 * spacing;   /* 出左边界 → 回到队尾 */
-            c.cleared = false;
-          }
-          c.el.style.transform = "translateX(" + c.x + "px)";
-        }
-
-        /* 奔跑两帧交替：原版 1000/12 毫秒 = 1/12 秒一帧 */
-        if (jumping) {
-          updateJump(dt * 60);   /* dt 秒 × 60 = 60fps 帧数 */
-        } else {
-          frameTimer += dt;
-          if (frameTimer >= 1 / 12) {
-            frameTimer = 0;
-            runFrame = !runFrame;
-            dinoEl.src = runFrame ? SPR_RUN2 : SPR_RUN1;
-          }
-        }
-
-        /* 自动起跳：仙人掌左缘进入「恐龙前缘 + 提前量」范围时起跳 */
-        var dinoFront = DINO_X + 88;
-        if (!hit.active) {
-          for (var j = 0; j < cacti.length; j++) {
-            var cc = cacti[j];
-            if (cc.cleared) continue;
-            if (cc.x <= dinoFront + LEAD) {
-              startJump();
-              cc.cleared = true;
-            }
-          }
-        }
-
-        /* 碰撞检测：落地撞上仙人掌 → 触发「被扎回退」 */
-        if (!jumping && !hit.active) {
-          for (var m = 0; m < cacti.length; m++) {
-            var hc = cacti[m];
-            if (hc.x + 4 < DINO_X + 74 && hc.x + 30 > DINO_X + 14) {
-              hc.cleared = false;   /* 回退后重新触发跳跃 */
-              hit.active = true;
-              hit.left = HIT_REWIND_DIST;
-              hit.timer = 0;
-              break;
-            }
-          }
-        }
-
-        /* 恐龙横坐标固定；被扎到时左右抖一下（“哎哟”感） */
-        var shakeX = 0;
-        if (hit.active) {
-          shakeX = (Math.floor(hit.timer * 18) % 2 === 0) ? 4 : -4;
-        }
-        runner.style.transform = "translate(" + shakeX + "px," + (jumping ? yPos * 2 : 0) + "px)";
-      } catch (e) { /* 单帧异常不中断循环 */ }
-
-      requestAnimationFrame(tick);
-    }
-
-    window.addEventListener("resize", function () {
-      updateSpeed();
-      DINO_X = window.innerWidth * 0.12;
-      layoutCacti();
-    });
-
-    updateSpeed();
-    requestAnimationFrame(tick);
   })();
-} catch (e) { /* 恐龙模块异常时忽略，不影响页面其他部分 */ }
-
-/* ---------- 白天 / 黑夜 ---------- */
-const toggleBtn = document.getElementById("theme-toggle");
-try {
-  if (localStorage.getItem("dino-theme") === "night") {
-    document.body.classList.add("night");
-    toggleBtn.textContent = "☀️";
-  }
-} catch (e) { /* file:// 下部分浏览器禁止本地存储，忽略 */ }
-toggleBtn.addEventListener("click", function () {
-  const night = document.body.classList.toggle("night");
-  toggleBtn.textContent = night ? "☀️" : "🌙";
-  try {
-    localStorage.setItem("dino-theme", night ? "night" : "day");
-  } catch (e) { /* 忽略 */ }
-});
-
-/* ---------- QQ 号：点击复制 ---------- */
-function toast(msg) {
-  const el = document.getElementById("toast");
-  el.textContent = msg;
-  el.classList.add("show");
-  clearTimeout(toast._t);
-  toast._t = setTimeout(function () { el.classList.remove("show"); }, 1600);
-}
-function fallbackCopy(text) {
-  let ok = false;
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.cssText = "position:fixed;left:-9999px;top:0;";
-    document.body.appendChild(ta);
-    ta.select();
-    ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-  } catch (e) { ok = false; }
-  toast(ok ? "QQ 号已复制 ✅" : "QQ 号：" + text);
-}
-document.getElementById("qq-btn").addEventListener("click", function () {
-  const qq = this.getAttribute("data-qq");
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(qq).then(
-      function () { toast("QQ 号已复制 ✅"); },
-      function () { fallbackCopy(qq); }
-    );
-  } else {
-    fallbackCopy(qq);
-  }
-});
-
-/* 恐龙模块的启动已内嵌在模块内部，无需额外代码 */
+} catch (e) { /* 动效异常忽略，按钮照常能点 */ }
 </script>
 </body>
 </html>

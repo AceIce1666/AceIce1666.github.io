@@ -1,0 +1,3529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AceIce | 祈蘭 · 个人主页</title>
+<meta name="description" content="AceIce | 祈蘭 的个人主页：在读大学生 · 音游苦手 · 昼伏夜出爱好者 · 白毛控。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%A6%96%3C/text%3E%3C/svg%3E" />
+<style>
+/* ============================================================
+   个人主页样式 —— 单文件版（改内容看正文，改配色看 :root）
+   ============================================================ */
+:root {
+  --bg: #f7f7f7;                      /* 页面底色：小恐龙游戏经典底色 */
+  --ink: #535353;                     /* 主色：恐龙、边框、文字 */
+  --card: rgba(255, 255, 255, 0.95);  /* 面板底色 */
+  --muted: #8f8f8f;                   /* 次要文字 */
+  --line: rgba(83, 83, 83, 0.4);      /* 地面线等装饰线 */
+  --cloud-strength: 0.86;             /* 云朵深浅：值越小云越深 */
+}
+body.night {
+  --bg: #191919;
+  --ink: #e9e9e9;
+  --card: rgba(30, 30, 36, 0.95);
+  --muted: #9a9a9a;
+  --line: rgba(233, 233, 233, 0.38);
+  --cloud-strength: 0.78;             /* 黑夜模式云再深一点，避免反色后太白 */
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ---------- 背景场景：小恐龙低调地一直在跑（固定层，不抢戏） ---------- */
+#scene {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+#ground {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 10vh;
+  height: 2px;
+  background: var(--line);
+}
+#dino-runner {
+  position: absolute;
+  left: 10vw;
+  bottom: 10vh;
+  will-change: transform;
+  opacity: 0.75;
+}
+.dino-jump { position: relative; will-change: transform; }
+.dino-sprite {
+  display: block;
+  width: 88px;
+  height: 94px;
+  image-rendering: pixelated;
+}
+.cactus-img {
+  position: absolute;
+  left: 0;
+  bottom: 10vh;
+  width: 34px;
+  height: 70px;
+  image-rendering: pixelated;
+  opacity: 0.65;
+  will-change: transform;
+}
+.cloud-img {
+  position: absolute;
+  top: auto;
+  width: 62px;
+  image-rendering: pixelated;
+  opacity: 0.95;
+  /* 颜色加重一点点：cloud-strength 是亮度，值越小云越深（0.86 = 比原版稍深一点） */
+  filter: brightness(var(--cloud-strength, 0.86)) saturate(1.15);
+  animation: drift 120s linear infinite;
+  will-change: transform;
+}
+/* 五朵云：时间上均匀错开（每朵差 1/5 个周期），配上不同的高度，
+   这样无论窗口多宽，天上任何时刻都至少有一朵云在飘 —— 不会出现「天上空空的」 */
+.cloud-img:nth-of-type(2) { animation-delay: -14.8s; }
+.cloud-img:nth-of-type(3) { animation-delay: -29.6s; }
+.cloud-img:nth-of-type(4) { animation-delay: -44.4s; }
+.cloud-img:nth-of-type(5) { animation-delay: -59.3s; }
+
+@keyframes drift {
+  from { transform: translateX(-25vw); }
+  to   { transform: translateX(110vw); }
+}
+
+/* ---------- 翼龙：偶尔从天上飞过去，点它 / 按 ↓ 会俯冲一下 ---------- */
+/* 贴图用的是 Chrome 小恐龙游戏原版的翼龙 sprite（两帧并排一张雪碧图）。
+   原生尺寸每帧 46×40，这里显示成 60×52（比小恐龙 44×47 明显大一点，天上看得清）。
+
+   ⚠️ 尺寸 / 缩放这块踩过两次坑，别随手改：
+   贴图存的是【1 倍原生尺寸】（92×40 一张图，每帧 46×40）。
+   因为元素显示成 60×52 > 46×40，所以浏览器永远是「放大」这张图：
+     系统缩放 100% → 放大 1.3 倍 / 125% → 1.63 倍 / 200% → 2.6 倍。
+   放大时 image-rendering: pixelated 是安全的，边缘硬、清晰。
+   反过来，如果贴图存成 2 倍尺寸（184×80）、元素又只显示 46×40，
+   那就变成「缩小」；缩小 + pixelated 会按最近邻丢像素，
+   把翼龙那对细长的翅膀打出一堆空洞 —— 某一版就是这么「看不见」的。
+   以后要改 width / height，让它们【大于 46×40】就行，别改小。 */
+#ptero {
+  position: absolute;
+  left: 0;
+  width: 60px;
+  height: 52px;
+  image-rendering: pixelated;   /* 只放大不缩小，所以这里可以放心用 */
+  opacity: 0.9;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform;
+  transform: translate(-140px, 0);
+  /* 两帧并排的雪碧图（base64 内嵌，不额外请求文件） */
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFwAAAAoCAYAAABzXJ2PAAAA50lEQVR42u2byw6EMAhFq5k/5Dv7jbpyM5lMTUp5lHOXbgQ8XgnY1opKRC4RuazvezZkqqMi2b+u994PCN9QFNzY0yl4VA//fvpWnrfKs0dalR+ERyN8REhU0rX8WDs/CI9C+FtCohG+qtPQyhPCvQmP9lX3Jls7Twj3Itx6cqb1RnhM/Gbih3Brwr0ImSUla9wQXo3wWcKyxP/EC+FZNj54P314jZ0m/Tse3thpBu0aPOY/EI6H+0wjreboEF6d8Oxz9VH8EL4r4Vn+Y6FL2Uyf7N0FhCMKTsHxcLwbwlHMU2EQjv7qBmnBciwePTwgAAAAAElFTkSuQmCC");
+  background-repeat: no-repeat;
+  background-size: 200% 100%;   /* 一张图里并排放两帧 */
+  background-position: 0% 50%;  /* 默认停在第 1 帧 */
+  transition: opacity 0.25s ease;
+}
+#ptero:hover { opacity: 0.9; }
+/* 扇翅膀：0.6 秒一个来回，两帧硬切（和原版翼龙节奏接近） */
+#ptero.flap { animation: ptero-flap 0.6s steps(1) infinite; }
+@keyframes ptero-flap {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+/* 被点到的俯冲动作：往下那一小段位移是在脚本的 rAF 循环里算的，
+   所以这里【不要】再给 transform 加 transition，否则每一帧的位移都会被
+   过渡拖慢，翼龙飞起来会一顿一顿的。 */
+#ptero.dive { opacity: 0.95; }
+body.night #ptero { filter: invert(1); }
+
+/* ---------- 夜晚的星星：白天几乎看不见，切到黑夜才亮起来 ---------- */
+#stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+body.night #stars { opacity: 1; }
+.star {
+  position: absolute;
+  background: #ffffff;
+  border-radius: 50%;
+  will-change: opacity, transform;
+  animation: twinkle var(--dur, 4s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes twinkle {
+  0%, 100% { opacity: var(--min-o, 0.25); transform: scale(1); }
+  50%      { opacity: var(--max-o, 0.95); transform: scale(1.25); }
+}
+/* 偶尔一颗流星划过 */
+#shooting-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.75);
+  opacity: 0;
+  animation: shoot 11s linear infinite;
+}
+@keyframes shoot {
+  0%, 88%  { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  90%      { opacity: 1; }
+  96%      { opacity: 0.9; transform: translate(-46vw, 24vw) scale(1); }
+  100%     { opacity: 0; transform: translate(-52vw, 27vw) scale(0.5); }
+}
+
+/* 黑夜模式：像原版游戏一样给贴图整体反色 */
+body.night #dino-runner,
+body.night .cactus-img { filter: invert(1); }
+body.night .cloud-img { filter: invert(1) brightness(var(--cloud-strength, 0.86)) saturate(1.15); }
+
+/* 左上角欢迎语 */
+#welcome {
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  z-index: 2;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--ink);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+  transition: color 0.3s ease;
+}
+
+/* 左上角实时时钟 */
+#clock {
+  position: fixed;
+  top: 44px;
+  left: 24px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ink);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+  transition: color 0.3s ease;
+}
+#clock-time {
+  font-family: "Cascadia Mono", "Consolas", "Courier New", monospace;
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+#clock-date {
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+/* ---------- 右上角：定位地区 + 实时天气（长条，和左上角时钟同一风格） ---------- */
+#weather {
+  position: fixed;
+  top: 20px; right: 74px;
+  z-index: 3;
+  display: none;               /* 数据拿到后才显示 */
+  align-items: center;
+  gap: 6px;
+  max-width: 46vw;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+#weather.show { display: flex; }
+#weather .w-place { overflow: hidden; text-overflow: ellipsis; }
+#weather .w-emoji { font-size: 15px; line-height: 1; }
+#weather .w-temp { font-family: "Cascadia Mono", "Consolas", monospace; }
+
+/* ---------- 右上角设置按钮 + 下拉面板（白天/黑夜、板块跳转都在这里） ---------- */
+.settings-wrap {
+  position: fixed;
+  top: 16px; right: 20px;
+  z-index: 3;
+}
+#theme-toggle {
+  width: 44px; height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.3s ease, border-color 0.3s ease;
+}
+#theme-toggle:hover { transform: scale(1.08); }
+#theme-toggle:active { transform: scale(0.94); }
+#theme-toggle.open { background: var(--ink); color: var(--bg); }
+
+.settings-panel {
+  position: absolute;
+  top: 54px; right: 0;
+  width: min(80vw, 250px);
+  max-height: min(72vh, 540px);
+  overflow-y: auto;
+  padding: 14px 16px 16px;
+  text-align: left;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.14);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-10px) scale(0.97);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease,
+              background 0.3s ease, border-color 0.3s ease;
+}
+.settings-panel.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+.settings-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+.opt-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.opt-row:hover { background: var(--ink); color: var(--bg); }
+.opt-row .grow { flex: 1 1 auto; }
+.opt-row .chev { font-size: 12px; opacity: 0.65; }
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.seg button {
+  padding: 8px 6px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.seg button:hover { background: var(--ink); color: var(--bg); }
+.seg button.active { background: var(--ink); color: var(--bg); }
+.settings-hr {
+  height: 1px;
+  margin: 10px 4px;
+  background: var(--line);
+}
+
+/* ---------- 页面主体（可下拉） ---------- */
+.page { position: relative; z-index: 1; }
+
+/* 第一屏：头像 + 简介 + 社交图标 */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 110px 24px 24px;
+  animation: hero-in 0.7s ease;
+}
+@keyframes hero-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+.avatar {
+  width: 148px; height: 148px;
+  margin-bottom: 30px;
+  display: grid;
+  place-items: center;
+  font-size: 60px;
+  background: var(--bg);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  overflow: hidden;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+img.avatar { display: block; object-fit: cover; }
+.hero h1 {
+  margin: 0 0 12px;
+  font-size: 32px;
+  letter-spacing: 2px;
+}
+.tagline {
+  margin: 0 0 30px;
+  max-width: 430px;
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+/* 社交图标：X / GitHub（点击跳转主页） + QQ 号（点击复制） */
+.socials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.social {
+  width: 54px; height: 54px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.social svg { width: 26px; height: 26px; fill: currentColor; display: block; }
+.social:hover { background: var(--ink); color: var(--bg); transform: translateY(-3px); }
+.social.qq {
+  width: auto; height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 22px 0 15px;
+  border-radius: 999px;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 16px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.social.qq svg { width: 24px; height: 24px; }
+.social.qq:hover { background: var(--ink); color: var(--bg); transform: translateY(-3px); }
+
+.scroll-hint {
+  margin-top: 18px;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  animation: float 1.8s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
+
+/* 第二屏：近期项目 */
+.projects, .sites, .doing, .fun, .about, .contact, .music, .taste, .tools {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 10px 24px 80px;
+}
+.doing, .fun, .about, .contact, .music, .taste, .tools { padding-bottom: 30px; }
+/* 「有趣的网站」下面紧接着就是页脚，底部留白收一点，
+   这样「回到顶部」按钮就贴在有趣网站下面，不会空出一大条。 */
+.sites { padding-bottom: 40px; }
+.projects h2, .sites h2, .doing h2, .about h2, .contact h2, .music h2, .taste h2, .tools h2 {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 26px;
+  letter-spacing: 3px;
+}
+.projects h2::after, .sites h2::after, .doing h2::after, .about h2::after, .contact h2::after, .music h2::after,
+.taste h2::after, .tools h2::after {
+  content: "";
+  display: block;
+  width: 44px; height: 2px;
+  margin: 12px auto 0;
+  background: var(--line);
+}
+.projects .sub, .sites .sub, .doing .sub, .about .sub, .contact .sub, .music .sub,
+.taste .sub, .tools .sub {
+  margin: 0 0 30px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+}
+/* 编译软件 / 环境：一排小胶囊，鼠标移上去反色 */
+.tool-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 20px;
+  border: 2px dashed var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.tool-chip:hover {
+  transform: translateY(-3px);
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+/* 窄屏放不下两张并排时自动上下排 */
+@media (max-width: 680px) {
+  .project-grid { grid-template-columns: 1fr; }
+}
+.empty-card {
+  grid-column: 1 / -1;
+  padding: 52px 24px;
+  text-align: center;
+  border: 2px dashed var(--line);
+  border-radius: 18px;
+  background: var(--card);
+}
+.empty-emoji { display: block; font-size: 46px; margin-bottom: 12px; }
+.empty-card p { margin: 6px 0; font-size: 18px; }
+.empty-card .empty-sub { font-size: 13px; color: var(--muted); }
+
+/* 项目卡片模板（以后有项目了就按这个格式加） */
+.project-card {
+  display: block;
+  position: relative;
+  padding: 20px 22px;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.project-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
+.project-card h3 { margin: 0 0 8px; font-size: 18px; }
+.project-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.project-card:hover p { color: var(--bg); }
+/* 没有链接的项目：鼠标样式区分一下，但样式和项目卡一致 */
+.project-card-static { cursor: default; }
+.project-card .project-tag {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+}
+.project-card:hover .project-tag { color: var(--bg); border-color: var(--bg); }
+/* 可点击的项目卡：右上角一个小箭头提示"能点" */
+.project-card .card-arrow {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.project-card:hover .card-arrow { transform: translate(3px, -3px); color: var(--bg); }
+
+/* 第三屏：有趣的网站卡片（整块可折叠，点顶部标题收起 / 展开） */
+.site-head {
+  width: 100%;
+  padding: 0 0 22px;
+  border: 2px dashed var(--line);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  background: var(--card);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.sites.collapsed .site-head {
+  padding-bottom: 18px;
+  border-bottom: 2px dashed var(--line);
+  border-radius: 18px;
+}
+.site-head:hover h2 { opacity: 0.7; }
+/* 折叠提示：横向展开。
+   注意：不能用旋转（rotate）—— 旋转 90° 后可用宽度只剩这个盒子自身的高度（≈20px），
+   中文会被压成一列竖字。所以这里改成「箭头单独转，文字保持横排」。 */
+.toggle-mark {
+  display: inline-block;
+  margin: 10px auto 0;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+.toggle-mark .tm-arrow {
+  display: inline-block;
+  margin-right: 4px;
+  transition: transform 0.25s ease;
+}
+.sites.collapsed .toggle-mark .tm-arrow { transform: rotate(-90deg); }
+.site-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s ease, opacity 0.25s ease;
+}
+.site-pad { overflow: hidden; min-height: 0; }
+.sites.collapsed .site-body { grid-template-rows: 0fr; opacity: 0; }
+.site-grid {
+  padding: 22px;
+  border: 2px dashed var(--line);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
+  background: var(--card);
+  transition: background 0.3s ease, border-color 0.3s ease;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.site-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.site-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
+.site-icon {
+  flex: 0 0 auto;
+  width: 64px; height: 64px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.site-icon img { width: 100%; height: 100%; object-fit: contain; }
+.site-icon img.icon-cover { object-fit: cover; }
+.site-icon svg { width: 36px; height: 36px; }
+.site-icon-emoji { font-size: 42px; }
+.site-info h3 { margin: 0 0 6px; font-size: 17px; }
+.site-info p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.site-card:hover .site-info p { color: var(--bg); }
+
+/* 最近在做：进行中事项卡片（虚线边框，和「我的项目」占位卡一致） */
+.doing-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  width: 100%;
+  max-width: 860px;      /* 和「关于我」一样宽 */
+  margin: 0 auto;
+}
+.doing-col {
+  display: flex;
+  flex-direction: column;
+}
+.doing-card, .music-card { flex: 1; width: 100%; }
+.doing-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  padding: 26px 28px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.doing-item {
+  font-size: 17px;
+  line-height: 1.95;
+  color: var(--ink);
+}
+
+/* 听首歌吧：音乐卡片 + 选歌弹窗 */
+.music-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 26px 20px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.music-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
+.music-icon { font-size: 40px; }
+.music-name { font-size: 17px; }
+.music-hint { font-size: 12px; color: var(--muted); }
+.music-card:hover .music-hint { color: var(--bg); }
+
+/* ---------- 主页上的「听首歌吧」大栏目（和弹窗共用同一个播放器） ---------- */
+.music-player {
+  max-width: 860px;      /* 和「关于我」一样宽 */
+  margin: 0 auto;
+  padding: 20px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  text-align: center;
+}
+.music-cover-lg {
+  display: block;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a505c, #1c1e24 70%);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  animation: vinyl-spin 8s linear infinite;
+  animation-play-state: paused;
+}
+.music-cover-lg.playing { animation-play-state: running; }
+.music-now {
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.music-row input[type="range"] { flex: 1; min-width: 0; }
+.music-player .music-mode {
+  display: grid;
+  place-items: center;
+  width: 28px; height: 28px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.music-player .music-mode.loop { background: var(--ink); color: var(--bg); }
+.music-list-home {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+/* 栏目加宽到 860px（和「关于我」一样）后，歌单排成两列，免得一行拉太长 */
+@media (min-width: 620px) {
+  .music-list-home {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+}
+.music-list-home .music-play {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.music-list-home .music-play:hover { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+
+/* 旋转封面圆盘（有封面显示封面，无封面用渐变 + 🎵 占位） */
+.vinyl-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.disc {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a505c, #1c1e24 70%);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  animation: vinyl-spin 8s linear infinite;
+  animation-play-state: paused;
+}
+.disc.playing { animation-play-state: running; }
+@keyframes vinyl-spin {
+  to { transform: rotate(360deg); }
+}
+.disc-note {
+  font-size: 34px;
+  pointer-events: none;
+}
+.disc::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+/* 进度条：拖动跳转播放位置 */
+.music-time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+  margin: 0 auto 14px;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.music-seek {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  outline: none;
+  cursor: pointer;
+}
+.music-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--card);
+  cursor: pointer;
+}
+.music-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--card);
+  cursor: pointer;
+}
+.music-mode {
+  position: relative;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mode-icon {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+.music-mode:hover { background: var(--ink); color: var(--bg); }
+.music-mode.loop { background: var(--ink); color: var(--bg); }
+.music-mode.loop::after {
+  content: "1";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 11px;
+  text-align: center;
+}
+
+.music-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.music-overlay.open { opacity: 1; pointer-events: auto; }
+.music-panel {
+  position: relative;
+  width: min(92vw, 420px);
+  max-height: 80vh;
+  overflow: auto;
+  padding: 30px 26px 22px;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: center;
+  transform: scale(0.85);
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.music-overlay.open .music-panel { transform: scale(1); }
+.music-panel h3, .modal-panel h3 { margin: 0 0 16px; font-size: 20px; }
+/* 弹窗右上角的 ✕：加大点击范围，手机上好点 */
+.music-close,
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+.music-close:active,
+.modal-close:active { background: var(--bg); }
+.music-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.music-play {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.music-play:hover { background: var(--ink); color: var(--bg); }
+.music-tip { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+
+/* 关于我（大栏目，直接在页面上看）：背景图 7.PNG + 标签 + 长简介 */
+.about-card {
+  position: relative;
+  overflow: hidden;
+  padding: 30px 28px;
+  border: 2px dashed var(--line);
+  border-radius: 18px;
+  /* 兜底底色：万一图没加载 / 简介太长图铺不满，露出来的也是卡片色，不会是一块空白 */
+  background-color: var(--card);
+  /* 背景图：想换图就改这里的文件名；文件名是大写 PNG，保持原样最稳妥 */
+  background-image: url("7.PNG");
+  /* 图片放大：160% = 1.6 倍，想更大就继续调大 */
+  background-size: 160%;
+  /* 图片往左上挪：两个值越小，看到的是图越靠左上的部分（0% 0% = 图的最左上角）。
+     所以「想再往左上」= 把这两个数一起调小；想往右下 = 调大。 */
+  background-position: 0% 20%;
+  background-repeat: no-repeat;
+  text-align: center;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+/* 关于我：卡片上有背景图，所以文字加粗放大一点、并加一层浅描边，避免看不清 */
+.about-card h2,
+.about-card .sub,
+.about-card .about-intro-title,
+.about-card .about-intro-text {
+  text-shadow: 0 1px 2px var(--bg), 0 0 10px var(--bg), 0 0 18px var(--bg);
+}
+.about-intro {
+  margin-top: 18px;
+  padding: 16px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+}
+.about-intro-title { margin: 0 0 8px; font-size: 13.5px; font-weight: 700; letter-spacing: 1px; color: var(--ink); }
+.about-intro-text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 2.1;
+  letter-spacing: 0.4px;
+  color: var(--ink);
+  text-align: left;
+}
+/* 关于我下面的小提示（现在已经不用了，留着以防以后想加回来） */
+.about-tip {
+  margin: 14px 0 0;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+/* ---------- 大栏目：来查成分！（现在是大栏目了，宽度 / 标题字号 / 间距都跟其他大栏目一致） ---------- */
+.taste-card {
+  margin-top: 18px;
+  padding: 22px 20px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  text-align: left;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+/* 分组小标题（我的成分 / 我的爱好） */
+.taste-group {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--muted);
+}
+.taste-list + .taste-group { margin-top: 24px; }
+.taste-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+/* 一条：左边标签、右边说明，全部直接可见，不用点 */
+.taste-item {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 16px;
+  align-items: baseline;
+  padding: 15px 18px;
+  border-radius: 12px;
+  background: var(--bg);
+}
+.taste-tag {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.taste-desc {
+  font-size: 17px;
+  line-height: 1.95;
+  color: var(--ink);
+  opacity: 0.88;
+}
+/* 成分里可以点出去的外链（比如酷狗主页）。
+   浏览器默认的蓝色链接太跳，这里改成和页面同色的下划线链接。 */
+.taste-desc a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: opacity 0.18s ease;
+}
+.taste-desc a:hover { opacity: 0.6; }
+/* 手机上左边那列太窄会挤，改成上下排 */
+@media (max-width: 520px) {
+  .taste-item { grid-template-columns: 1fr; gap: 5px; }
+}
+
+/* 联系我弹窗里的卡片（圆形图标 + 文字） */
+.contact-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.contact-card:hover { transform: translateY(-4px); background: var(--ink); color: var(--bg); }
+.contact-icon {
+  flex: 0 0 auto;
+  width: 54px; height: 54px;
+  display: grid;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+}
+.contact-icon svg {
+  width: 28px; height: 28px;
+  display: block;
+  fill: currentColor;
+}
+.contact-icon-emoji { font-size: 26px; line-height: 1; }
+.contact-icon-sm svg { width: 22px; height: 22px; }
+.contact-row-icons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+/* 页面上「联系我」栏目：X / GitHub / B站 三个圆形图标一排，下面 QQ / 邮箱 两张信息卡 */
+.contact-social-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.contact-social-row .contact-card { padding: 14px; }
+.contact-social-row .contact-card:hover { background: var(--ink); color: var(--bg); }
+.contact-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  max-width: 600px;
+  margin: 14px auto 0;
+}
+/* 弹窗里的 QQ / 邮箱：上下排列（主页那张保持左右并排） */
+#contact-overlay .contact-info-grid {
+  grid-template-columns: 1fr;
+  max-width: 360px;
+}
+.contact-info-grid .contact-card:hover { background: var(--ink); color: var(--bg); }
+.contact-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.contact-name { font-size: 17px; }
+.contact-text {
+  font-size: 12px;
+  color: var(--muted);
+  word-break: break-all;
+}
+/* QQ 号：等宽字体、大一号 */
+.contact-text-num {
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+.contact-card:hover .contact-text { color: var(--bg); }
+
+/* 通用弹窗（听首歌吧 / 联系我 / 关于主页 共用外观） */
+.modal-panel {
+  position: relative;
+  width: min(92vw, 420px);
+  max-height: 80vh;
+  overflow: auto;
+  padding: 30px 26px 22px;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: center;
+  transform: scale(0.85);
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+.modal-overlay.open .modal-panel { transform: scale(1); }
+.modal-title { margin: 0 0 16px; font-size: 20px; }
+.contact-cards { display: flex; flex-direction: column; gap: 12px; }
+.modal-note { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+.contact-cards { display: flex; flex-direction: column; gap: 12px; }
+.contact-cards .contact-card { text-align: left; }
+
+/* 关于主页：创建时间 + 访问次数 */
+.stat-list { display: flex; flex-direction: column; gap: 12px; margin: 0; text-align: left; }
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+}
+.stat-label { font-size: 13px; color: var(--muted); }
+.stat-value { font-size: 16px; }
+.stat-value-num {
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+footer {
+  position: relative;
+  z-index: 2;
+  padding: 6px 24px 34px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* 页脚：创建时间 + 访问次数（和「关于主页」弹窗共用同一份数据） */
+.footer-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 18px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.footer-stat { display: inline-flex; align-items: center; gap: 6px; }
+/* 回到顶部：小小的一颗胶囊，放在页脚最上面（版权行上面） */
+.to-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 7px 16px;
+  border: 2px dashed var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.to-top:hover {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+  transform: translateY(-2px);
+}
+.to-top:active { transform: translateY(0); }
+.footer-stat .num {
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  color: var(--ink);
+}
+
+/* 复制 QQ 号的提示气泡 */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 100px;
+  transform: translateX(-50%) translateY(16px);
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- 小屏幕适配 ---------- */
+/* ============================================================
+ * 首屏「在线 / 离线」状态小框
+ * 换文案：改下面 JS 里 setStatus() 传的那几个字
+ * 换颜色：改 .status-dot.online / .status-dot.offline 的 background
+ * ============================================================ */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 22px auto 0;
+  padding: 8px 18px;
+  border: 2px dashed var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--muted);
+}
+/* 在线：绿灯（带一圈呼吸光晕） */
+.status-dot.online {
+  background: #2ecc71;
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.25);
+  animation: status-pulse 2.4s ease-in-out infinite;
+}
+/* 离线：红灯（不呼吸，安静一点） */
+.status-dot.offline {
+  background: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.22);
+}
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.25); }
+  50%      { box-shadow: 0 0 0 6px rgba(46, 204, 113, 0.10); }
+}
+
+/* ============================================================
+ * 点击 / 滑动屏幕时的粒子小特效（点一下炸一小簇，滑动拖出一串小星星）
+ * 觉得太花哨就把下面 opacity 调小，或者在设置里关掉「动效」
+ * ============================================================ */
+.spark {
+  position: fixed;
+  z-index: 9;
+  pointer-events: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink);
+  /* 加一点光晕，让星星在白底 / 黑底上都看得清 */
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.18), 0 0 14px currentColor;
+  will-change: transform, opacity;
+  animation: spark-fly 1s cubic-bezier(0.1, 0.7, 0.4, 1) forwards;
+}
+@keyframes spark-fly {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(0.55) rotate(0deg); }
+  60%  { opacity: 1; }
+  to   { opacity: 0; transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, -34px)) scale(1.6) rotate(var(--sr, 0deg)); }
+}
+body.no-motion .spark { display: none; }
+
+/* ============================================================
+ * 滚动浮动字幕条：往下滑时悬浮在顶部，随所在栏目换文案
+ * ============================================================ */
+.float-bar {
+  position: fixed;
+  left: 50%;
+  z-index: 6;   /* 具体 top 由脚本按时间 / 天气的实际高度算出来，见 float-bar 那段 JS */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(56vw, 420px);
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+  opacity: 0;
+  transform: translate(-50%, -14px);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  pointer-events: none;
+}
+.float-bar.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.float-bar .float-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+  animation: status-pulse 2.4s ease-in-out infinite;
+}
+.float-bar .float-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* （旧的 .switching 半透明过渡已去掉：它一旦被打断就会把字幕条卡在半透明状态） */
+
+/* ============================================================
+ * 滚动入场：每块内容随页面向下滑时从下方浮上来
+ * 只播一次，不来回闪；无障碍设置里关了动画就完全不参与
+ * ============================================================ */
+html.js-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.75, 0.3, 1),
+              transform 0.7s cubic-bezier(0.2, 0.75, 0.3, 1);
+  transition-delay: var(--d, 0ms);
+  will-change: opacity, transform;
+}
+html.js-ready [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
+/* 同组元素依次出现（给每张卡片一点小延迟） */
+html.js-ready [data-reveal].d1 { --d: 80ms; }
+html.js-ready [data-reveal].d2 { --d: 160ms; }
+html.js-ready [data-reveal].d3 { --d: 240ms; }
+html.js-ready [data-reveal].d4 { --d: 320ms; }
+html.js-ready [data-reveal].d5 { --d: 400ms; }
+/* 用属性写也行：<div data-reveal data-d="2"> 等价于加 class="d2" */
+html.js-ready [data-reveal][data-d="1"] { --d: 80ms; }
+html.js-ready [data-reveal][data-d="2"] { --d: 160ms; }
+html.js-ready [data-reveal][data-d="3"] { --d: 240ms; }
+html.js-ready [data-reveal][data-d="4"] { --d: 320ms; }
+html.js-ready [data-reveal][data-d="5"] { --d: 400ms; }
+
+@media (max-width: 560px) {
+  .avatar { width: 112px; height: 112px; }
+  .hero h1 { font-size: 26px; }
+  /* 关于我：手机屏幕窄，简介会折成更多行，卡片变高；
+     而背景图是按「宽度 160%」缩放的，高度不够会露出下面一条空白。
+     这里改成「按高度缩放」，保证不管简介多长都不会露底。
+     ⚠️ 关于 background-position 的纵向那个值：
+     当背景图高度 == 卡片高度时，纵向是没有余量可移的，写 20% / 50% / 0% 效果完全一样。
+     所以想让图「往上走」，必须先把图放大到比卡片高（这里用 120%），
+     放大之后 0% 才是真的贴住图的上边缘。 */
+  .about-card {
+    background-size: auto 120%;
+    background-position: 20% 0%;    /* 往左上移：横向偏左、纵向贴顶 */
+  }
+  .site-grid { grid-template-columns: 1fr; }
+  /* 近期项目：手机端三张卡上下排列，不要挤成两列 */
+  .project-grid { grid-template-columns: 1fr; }
+  /* 手机端：左上角欢迎语与时钟整体缩小靠边，避免拥挤 */
+  #welcome { top: 14px; left: 14px; font-size: 12px; }
+  #clock { top: 34px; left: 14px; }
+  #clock-time { font-size: 13px; }
+  #clock-date { font-size: 10px; }
+  /* 最近在做 / 听首歌吧 上下堆叠 */
+  .doing-row { grid-template-columns: 1fr; }
+  /* 联系我：小屏时 QQ / 邮箱 竖着排，避免卡片被挤扁 */
+  .contact-info-grid { grid-template-columns: 1fr; max-width: 340px; }
+  /* 设置面板：小屏时不要贴到屏幕最右边 */
+  .settings-wrap { top: 14px; right: 14px; }
+  .settings-panel { width: min(82vw, 240px); }
+  /* 天气：长条样式，缩到设置按钮左边 */
+  #weather { top: 14px; right: 64px; max-width: 42vw; padding: 6px 12px; font-size: 12px; }
+  /* 浮动字幕条：手机端由脚本自动算位置（躲开时间 / 天气），这里只管缩小 */
+  .float-bar { max-width: 80vw; padding: 7px 14px; font-size: 12px; }
+  .status-pill { font-size: 12px; padding: 7px 15px; }
+}
+
+/* 系统里开了「减弱动态效果」时，所有动画一律关掉 */
+@media (prefers-reduced-motion: reduce) {
+  html.js-ready [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .cloud-img, .dino-sprite, .status-dot, .float-bar .float-dot,
+  .music-cover-lg.playing, .disc.playing, .scroll-hint,
+  #ptero.flap, .star, #shooting-star { animation: none !important; }
+  .float-bar { transition: opacity 0.2s ease; }
+  /* 翼龙在减弱动态时也照常飞一次，只是不扇翅。
+     ⚠️ 这里以前有一句 `#ptero { transition: transform 0.6s ease !important; }`，
+     它把整整十几秒的飞行硬压成 0.6 秒 —— 翼龙「嗖」一下就没影了，
+     在开了「减少动画」的 Windows 上看起来就是「翼龙根本不存在」。
+     那句话已经删掉，而且飞行改成由 JS 自己算位移（见脚本 startFlight），
+     这样任何 CSS transition 规则都影响不到它。 */
+}
+/* 设置面板里手动关掉动效 */
+body.no-motion html.js-ready [data-reveal] { opacity: 1; transform: none; transition: none; }
+body.no-motion .float-bar { transition: opacity 0.2s ease; }
+body.no-motion .status-dot,
+body.no-motion .float-bar .float-dot,
+body.no-motion #ptero.flap,
+body.no-motion .star,
+body.no-motion #shooting-star { animation: none; }
+/* 关掉动效时，星星就静静亮着（不闪），翼龙也不再自己飞 */
+body.no-motion .star { opacity: 0.6; }
+
+/* 手机竖屏：原版翼龙本来就小巧（46×40），不用再缩，保持原比例 */
+
+</style>
+</head>
+<body>
+
+  <!-- ============ 背景场景（固定层：小恐龙一直跑，遇到仙人掌自动跳，纯装饰） ============ -->
+  <div id="scene" aria-hidden="true">
+    <div id="ground"></div>
+    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 8%; animation-duration: 90s;">
+    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 20%; animation-duration: 130s; animation-delay: -30s;">
+    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 4%; animation-duration: 70s; animation-delay: -60s;">
+    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 13%; animation-duration: 105s; animation-delay: -48s;">
+    <img class="cloud-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAOCAYAAABQFS4BAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB5SURBVEhL1ZJBDoAwCAT7/yfyGU084QYbdpVSJ+FgC2GgjrEAMzt84P0WoCTKRmftMEJMbhnqFtn8z1EFnn6nZahNfR0OUTbM2waZmkwOhSrLIi0HizAwv5pUzy65GamlTS+bubn5SaKp8LubyycSjfBPtUOg3284ATCoeHJcOy5/AAAAAElFTkSuQmCC" alt="" style="top: 26%; animation-duration: 150s; animation-delay: -95s;">
+    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 24vw;">
+    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 44vw;">
+    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 64vw;">
+    <img class="cactus-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAjCAYAAABy3+FcAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACISURBVEhL7dLRCoAwCAXQ/aP//x17LAwc62rqCqoHL/gy9YCw1pz03jcp7KXCi0Q0ahlC4Bb0GhKCESJ9F/IQ7F1COJhG8F4EQgRvxMEQsR7xzesVonvfIFY9Rg7A+lhZZACriPROgIV4pZbnZCEX4WSgEOHMNyOQRiSF6BSi8x+EwwtYOCPZAd/jzNbLEem0AAAAAElFTkSuQmCC" alt="" style="left: 84vw;">
+    <div id="dino-runner">
+      <div class="dino-jump" id="dino-jump">
+        <img id="dino-sprite" class="dino-sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAvCAYAAACYECivAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADxSURBVGhD7ZBBDsMwCATzR///HT62l1K1IyPsgp06YaS9xMCOchyTqLU+IsP74bDQG94Pg0WlFFdSmESJMtPENWGB33uTwoIm7E0KCyn8SgoLlxeW+d6wz80yYfWhE+5TbDSmBwv5bsF9CoxG9WCBOtiAkiOi3NPCzusL8+Dn7kh4w+p9w1JrkQWnC1sHtXlv7ifMQ9bcaHjvvsKzwh+RwtHpFiTbCQurxbcRdouS2eIpLESLy70UJl7xZaLCtsKWeM8cZ9gVAksoocnwvTXDrlA0EZZTqpXvy5PYXnhp+S9sL/z34tsKa+H86VCQ4fwsnnT+os73N24AAAAAAElFTkSuQmCC" alt="奔跑的小恐龙">
+      </div>
+    </div>
+    <!-- 翼龙：偶尔飞过一次，点它会俯冲（纯装饰） -->
+    <div id="ptero" role="button" tabindex="-1" aria-label="翼龙" title="点我一下"></div>
+  </div>
+
+  <!-- 夜晚的星星 + 偶尔的流星（白天隐藏，切黑夜才亮） -->
+  <div id="stars" aria-hidden="true">
+    <span id="shooting-star"></span>
+  </div>
+
+  <!-- 左上角欢迎语 -->
+  <div id="welcome" aria-hidden="true">Personal Homepage</div>
+
+  <!-- 左上角实时时钟 -->
+  <div id="clock" aria-hidden="true">
+    <span id="clock-time">--:--:--</span>
+    <span id="clock-date">--月--日 周-</span>
+  </div>
+
+  <!-- 右上角：定位地区 + 实时天气（内容由页面脚本填充） -->
+  <div id="weather" aria-label="当前位置与天气">
+    <span class="w-place">定位中…</span>
+    <span class="w-emoji">🌤️</span>
+    <span class="w-temp">--°C</span>
+  </div>
+
+  <!-- ============ 右上角：设置按钮（主题切换 + 板块直达） ============ -->
+  <div class="settings-wrap">
+    <button id="theme-toggle" type="button" title="设置" aria-label="设置" aria-haspopup="true" aria-expanded="false">⚙️</button>
+
+    <div class="settings-panel" id="settings-panel" role="menu" aria-label="设置">
+      <div class="settings-title">主题</div>
+      <div class="seg" role="group" aria-label="白天 / 黑夜">
+        <button type="button" data-theme="day" role="menuitemradio" aria-checked="false">☀️ 白天</button>
+        <button type="button" data-theme="night" role="menuitemradio" aria-checked="false">🌙 黑夜</button>
+      </div>
+
+      <div class="settings-hr"></div>
+
+      <div class="settings-title">动效</div>
+      <div class="seg" role="group" aria-label="动效开关">
+        <button type="button" id="motion-toggle" role="menuitemcheckbox" aria-checked="true">✨ 动效开</button>
+      </div>
+
+      <div class="settings-hr"></div>
+      <!-- 跳转菜单：内容由页面底部脚本里的 SITE_CONFIG 自动生成，想改去那里改 -->
+      <div id="settings-nav"></div>
+    </div>
+  </div>
+
+  <main class="page">
+
+    <!-- ============ 第一部分：关于我（改内容主要都在这里） ============ -->
+    <section class="hero" id="hero">
+      <!-- 头像：想换照片时，替换下面的 src 即可 -->
+      <img class="avatar" src="avatar.png" alt="AceIce | 祈蘭 的头像">
+
+      <h1>AceIce | 祈蘭</h1>
+
+      <p class="tagline">
+        在读大学生<br>
+        音游苦手 昼伏夜出爱好者 白毛控
+      </p>
+
+      <!-- 社交账号：X 和 GitHub 已填好，QQ 号待填 -->
+      <div class="socials">
+        <a class="social" href="https://x.com/aliang1666" target="_blank" rel="noopener" aria-label="X（Twitter）" title="X（Twitter）">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+        </a>
+        <a class="social" href="https://github.com/AceIce1666" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        </a>
+        <button class="social qq" id="hero-qq-btn" type="button" data-qq="227015198" title="点击复制 QQ 号" aria-label="QQ 号 227015198，点击复制">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.395 15.035a40 40 0 0 0-.803-2.264l-1.079-2.695c.001-.032.014-.562.014-.836C19.526 4.632 17.351 0 12 0S4.474 4.632 4.474 9.241c0 .274.013.804.014.836l-1.08 2.695a39 39 0 0 0-.802 2.264c-1.021 3.283-.69 4.643-.438 4.673.54.065 2.103-2.472 2.103-2.472 0 1.469.756 3.387 2.394 4.771-.612.188-1.363.479-1.845.835-.434.32-.379.646-.301.778.343.578 5.883.369 7.482.189 1.6.18 7.14.389 7.483-.189.078-.132.132-.458-.301-.778-.483-.356-1.233-.646-1.846-.836 1.637-1.384 2.393-3.302 2.393-4.771 0 0 1.563 2.537 2.103 2.472.251-.03.581-1.39-.438-4.673"/></svg>
+          <span class="qq-num">227015198</span>
+        </button>
+      </div>
+
+      <!-- 在线 / 离线状态小框：右边的字由脚本根据网络情况自动切换 -->
+      <div class="status-pill" id="status-pill" title="网络状态">
+        <span class="status-dot online" id="status-dot"></span>
+        <span id="status-text">在线</span>
+      </div>
+
+      <div class="scroll-hint" aria-hidden="true">▼ 往下滑，看看我的项目</div>
+    </section>
+
+    <!-- ============ 第二部分：近期项目 ============ -->
+    <section class="projects" id="projects" data-bar="▸ 做过一些东西，也想做更多">
+      <h2 data-reveal>近期项目</h2>
+      <p class="sub" data-reveal>做过 / 正在做的项目，都会放在这里</p>
+
+      <div class="project-grid">
+        <!-- 项目卡片：有链接就用 <a class="project-card" href="...">，没有链接就用 <div> -->
+        <a class="project-card" data-reveal data-d="1" href="https://github.com/AceIce1666/guess-number-game" target="_blank" rel="noopener" title="点开看这个项目的 GitHub 仓库">
+          <span class="card-arrow" aria-hidden="true">↗</span>
+          <h3>Python 猜数字小游戏</h3>
+          <p>这是一个猜数字小游戏。看看你能几次成功？要来试试吗？</p>
+          <span class="project-tag">练习项目 · 点击试试</span>
+        </a>
+
+        <div class="project-card project-card-static" data-reveal data-d="2">
+          <h3>个人主页 v2.0</h3>
+          <p>现在这个主页还不是最终版本！为了让内容更丰富，我还会继续改进的！</p>
+          <span class="project-tag">改进中</span>
+        </div>
+
+        <!-- 以后有项目了：把下面的注释去掉，按这个格式复制粘贴即可
+        <a class="project-card" href="https://项目链接" target="_blank" rel="noopener">
+          <h3>项目名称</h3>
+          <p>一句话介绍这个项目做了什么。</p>
+        </a>
+        -->
+      </div>
+    </section>
+
+    <!-- ============ 大栏目：编译软件 / 环境 ============
+         加一个：复制任意一行 <span class="tool-chip">，改中间的名字就行。 -->
+    <section class="tools" id="tools" data-bar="🧰 我常用的编译软件 / 环境">
+      <h2 data-reveal>编译软件/环境</h2>
+      <p class="sub" data-reveal>平时写代码用的家伙什</p>
+
+      <div class="tool-grid" data-reveal data-d="1">
+        <span class="tool-chip">VS2026</span>
+        <span class="tool-chip">VScode</span>
+        <span class="tool-chip">HBuilderX</span>
+        <span class="tool-chip">IDLE</span>
+        <span class="tool-chip">Git cmd</span>
+      </div>
+    </section>
+
+    <!-- ============ 大栏目：最近在做 ============ -->
+    <section class="doing" id="doing" data-bar="📚 正在啃：C / C++ / Python / Web 前端">
+      <h2 data-reveal>最近在做</h2>
+      <p class="sub" data-reveal>正在进行中的二三事</p>
+
+      <div class="doing-row">
+        <div class="doing-col">
+          <div class="doing-card" data-reveal>
+            <div class="doing-item">努力学习计算机ing&nbsp;&nbsp;&nbsp;&nbsp;↓</div>
+            <div class="doing-item">C语言，C++，python，Web前端开发</div>
+            <div class="doing-item">学习每一个接触到的新事物</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 大栏目：关于我（直接显示，不再是弹窗） ============ -->
+    <section class="about" id="about" data-bar="🙋 想认识一下的话，往下滑">
+      <h2 data-reveal>关于我</h2>
+      <p class="sub" data-reveal>Get to know me!</p>
+
+      <div class="about-card" data-reveal>
+        <div class="about-intro">
+          <p class="about-intro-title">关于我的那些事</p>
+          <p class="about-intro-text" id="about-intro-text">Halo，这里是祈蘭！<br>你也可以叫我AceIce或者凉桑！<br>来自沈阳理工大学&nbsp;&nbsp;网络工程专业<br>正在努力学习ing<br>E人I人随时切换，欢迎来找我玩！<br>日常：吃饱饭 睡大觉 打点游戏 追追新番<br>也喜欢折腾一些感兴趣的东西<br>希望做一个有有趣灵魂的人<br>成为更好的自己！</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 大栏目：来查成分！（算「关于我」的延伸，现在也是大栏目）
+         全部直接显示，不用点。
+         加一条新的：复制任意一个 <li class="taste-item">，改两处 ——
+           <span class="taste-tag"> 里写标签名
+           <span class="taste-desc"> 里写说明（想换行就写 <br>）
+         想分组（比如再隔一个「我的爱好」小标题），复制 <p class="taste-group"> + <ul class="taste-list"> 一起。 -->
+    <section class="taste" id="taste" data-bar="🧪 来查成分！">
+      <h2 data-reveal>来查成分！</h2>
+      <p class="sub" data-reveal>看看我都掺了些什么</p>
+      <div class="taste-card" data-reveal data-d="1">
+        <ul class="taste-list">
+          <li class="taste-item">
+            <span class="taste-tag">卡牌/桌游</span>
+            <span class="taste-desc">游戏王、宝可梦、影之诗和符文战场等均有涉猎，<br>欢迎同好来找我玩！（务必）（跪拜）<br>一起耍起好嘛！</span>
+          </li>
+          <li class="taste-item">
+            <span class="taste-tag">音游人</span>
+            <span class="taste-desc">我从来没觉得玩音游开心过……<br>orzmic 13.21<br>phigros 15.1<br>rotaeno 15.259<br>还有喵斯快跑、世界计划、DJMAX、PLATiNA :: LAB、中二节奏等等，<br>又菜又爱玩<br>最近刚入坑 maimai，努力推分中🙃</span>
+          </li>
+          <li class="taste-item">
+            <span class="taste-tag">音乐爱好者</span>
+            <span class="taste-desc">没有音乐就无法生存下去<br>涉猎曲风广泛，国日英文都喜欢<br>偏好一些 Hardcore、speedcore，<br>年度歌手 ×N = かめりあ，山茶花太神了<br><a href="https://activity.kugou.com/share/v-c7b4da67/index.html?id=5d08b936c5ee0120c2b501cf7af4e5fc" target="_blank" rel="noopener">点击直达我的酷狗主页查看成分 →</a></span>
+          </li>
+          <li class="taste-item">
+            <span class="taste-tag">二次元</span>
+            <span class="taste-desc">平常喜欢看一些轻小说漫画什么的，也会追一点点新番<br>最近在看辉夜大小姐漫画<br>实体书《永冬无境，幻梦残墟》还有说俄语的艾莉同学<br>如果我也能一直宅在家就好了（bushi）</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 大栏目：听首歌吧（在「关于我」下面；主页上就能直接播放，和弹窗共用同一个播放器） ============ -->
+    <section class="music" id="music" data-bar="♪ 换个音乐 · 换种心情">
+      <h2 data-reveal>听首歌吧</h2>
+      <p class="sub" data-reveal>换个音乐 · 换种心情</p>
+
+      <div class="music-player" data-reveal>
+        <!-- 默认显示第一首歌的封面（还没播放时也不空着） -->
+        <div class="music-cover-lg" id="music-cover-lg" style="background-image: url('1.png');" aria-hidden="true"></div>
+        <p class="music-now" id="music-now">还没选歌，点下面的歌名开始播放</p>
+
+        <div class="music-row">
+          <span id="music-cur-2">0:00</span>
+          <input type="range" class="music-seek" id="music-seek-2" min="0" max="100" step="0.1" value="0" aria-label="播放进度">
+          <span id="music-dur-2">0:00</span>
+          <button class="music-mode" id="music-mode-2" type="button" title="切换顺序播放 / 单曲循环" aria-label="切换顺序播放 / 单曲循环">
+            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+          </button>
+        </div>
+
+        <ul class="music-list-home">
+          <li><button class="music-play" type="button" data-src="torinouta.mp3" data-cover="1.png"><span>▶</span><span>鳥の詩 · Lia</span></button></li>
+          <li><button class="music-play" type="button" data-src="tooisorahe.mp3" data-cover="2.png"><span>▶</span><span>遠い空へ · 市川淳</span></button></li>
+          <li><button class="music-play" type="button" data-src="kumoito.mp3" data-cover="3.png"><span>▶</span><span>蜘蛛糸モノポリー · sasakure.UK</span></button></li>
+          <li><button class="music-play" type="button" data-src="haruhikage.mp3" data-cover="4.png"><span>▶</span><span>春日影 · MyGO!!!!!</span></button></li>
+          <li><button class="music-play" type="button" data-src="luv-letter.mp3" data-cover="5.png"><span>▶</span><span>Luv Letter · DJ OKAWARI</span></button></li>
+          <li><button class="music-play" type="button" data-src="inochi-ni-kirawarete.mp3" data-cover="8.png"><span>▶</span><span>命に嫌われている · 25時、ナイトコードで。</span></button></li>
+        </ul>
+        <p class="music-tip">点歌名播放 / 暂停，拖动进度条快进</p>
+      </div>
+    </section>
+
+    <!-- ============ 大栏目：联系我（X / GitHub / B站 三个图标排一排） ============ -->
+    <section class="contact" id="contact" data-bar="💬 想聊聊？随时来找我玩">
+      <h2 data-reveal>联系我</h2>
+      <p class="sub" data-reveal>想聊聊的话，随时找我</p>
+
+      <div class="contact-social-row" data-reveal>
+        <a class="contact-card" href="https://x.com/aliang1666" target="_blank" rel="noopener" aria-label="X（Twitter）" title="X（Twitter）">
+          <span class="contact-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+          </span>
+        </a>
+        <a class="contact-card" href="https://github.com/AceIce1666" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+          <span class="contact-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          </span>
+        </a>
+        <a class="contact-card" href="https://space.bilibili.com/1915194275" target="_blank" rel="noopener" aria-label="B站主页" title="B站主页">
+          <span class="contact-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7.4 2.1 10.3 5h3.4l2.9-2.9a1 1 0 0 1 1.4 1.4L16.4 5H18a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h1.6L6 3.5a1 1 0 0 1 1.4-1.4ZM18 7H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Zm-8.5 3.5a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Zm5 0a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Z"/>
+            </svg>
+          </span>
+        </a>
+      </div>
+
+      <!-- QQ / 邮箱：点击复制（和「联系我」弹窗里的内容一致） -->
+      <div class="contact-info-grid" data-reveal data-d="1">
+        <button class="contact-card" id="contact-qq-btn" type="button" data-qq="227015198" aria-label="QQ 号 227015198，点击复制" title="点击复制 QQ 号">
+          <span class="contact-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.395 15.035a40 40 0 0 0-.803-2.264l-1.079-2.695c.001-.032.014-.562.014-.836C19.526 4.632 17.351 0 12 0S4.474 4.632 4.474 9.241c0 .274.013.804.014.836l-1.08 2.695a39 39 0 0 0-.802 2.264c-1.021 3.283-.69 4.643-.438 4.673.54.065 2.103-2.472 2.103-2.472 0 1.469.756 3.387 2.394 4.771-.612.188-1.363.479-1.845.835-.434.32-.379.646-.301.778.343.578 5.883.369 7.482.189 1.6.18 7.14.389 7.483-.189.078-.132.132-.458-.301-.778-.483-.356-1.233-.646-1.846-.836 1.637-1.384 2.393-3.302 2.393-4.771 0 0 1.563 2.537 2.103 2.472.251-.03.581-1.39-.438-4.673"/></svg>
+          </span>
+          <span class="contact-info">
+            <span class="contact-name">QQ</span>
+            <span class="contact-text contact-text-num">227015198</span>
+          </span>
+        </button>
+
+        <button class="contact-card" id="contact-mail-btn" type="button" data-mail="aliangsama@qq.com" aria-label="邮箱 aliangsama@qq.com，点击复制" title="点击复制邮箱">
+          <span class="contact-icon contact-icon-emoji" aria-hidden="true">✉️</span>
+          <span class="contact-info">
+            <span class="contact-name">邮箱</span>
+            <span class="contact-text">aliangsama@qq.com</span>
+          </span>
+        </button>
+      </div>
+    </section>
+    <!-- 联系我、关于主页：见下方的弹窗 -->
+
+    <!-- 选歌弹窗 -->
+    <div id="music-overlay" class="music-overlay" data-modal>
+      <div class="music-panel" role="dialog" aria-label="选歌">
+        <button class="music-close" id="music-close" type="button" data-close aria-label="关闭">✕</button>
+        <div class="vinyl-wrap">
+          <!-- 默认显示第一首歌的封面，播放别的歌时会自动换 -->
+          <div class="disc" id="disc" style="background-image: url('1.png');">
+            <span class="disc-note" id="disc-note" style="display: none;">🎵</span>
+          </div>
+        </div>
+        <div class="music-time">
+          <span id="music-cur">0:00</span>
+          <input type="range" class="music-seek" id="music-seek" min="0" max="100" step="0.1" value="0" aria-label="播放进度">
+          <span id="music-dur">0:00</span>
+          <button class="music-mode" id="music-mode" type="button" title="切换顺序播放 / 单曲循环" aria-label="切换顺序播放 / 单曲循环">
+            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+          </button>
+        </div>
+        <ul class="music-list">
+          <li><button class="music-play" type="button" data-src="torinouta.mp3" data-cover="1.png"><span>▶</span><span>鳥の詩 · Lia</span></button></li>
+          <li><button class="music-play" type="button" data-src="tooisorahe.mp3" data-cover="2.png"><span>▶</span><span>遠い空へ · 市川淳</span></button></li>
+          <li><button class="music-play" type="button" data-src="kumoito.mp3" data-cover="3.png"><span>▶</span><span>蜘蛛糸モノポリー · sasakure.UK</span></button></li>
+          <li><button class="music-play" type="button" data-src="haruhikage.mp3" data-cover="4.png"><span>▶</span><span>春日影 · MyGO!!!!!</span></button></li>
+          <li><button class="music-play" type="button" data-src="luv-letter.mp3" data-cover="5.png"><span>▶</span><span>Luv Letter · DJ OKAWARI</span></button></li>
+          <li><button class="music-play" type="button" data-src="inochi-ni-kirawarete.mp3" data-cover="8.png"><span>▶</span><span>命に嫌われている · 25時、ナイトコードで。</span></button></li>
+        </ul>
+        <p class="music-tip">点歌播放 / 暂停，拖动进度条快进</p>
+      </div>
+    </div>
+    <audio id="music-player" preload="metadata"></audio>
+
+    <!-- 联系我弹窗：和页面上「联系我」栏目内容完全一致（5 个联系方式） -->
+    <div id="contact-overlay" class="modal-overlay" data-modal="contact">
+      <div class="modal-panel" role="dialog" aria-label="联系我">
+        <button class="modal-close" type="button" data-close aria-label="关闭">✕</button>
+        <h3 class="modal-title">联系我</h3>
+
+        <!-- X / GitHub / B站：圆形图标 -->
+        <div class="contact-row-icons">
+          <a class="contact-card" href="https://x.com/aliang1666" target="_blank" rel="noopener" aria-label="X（Twitter）" title="X（Twitter）">
+            <span class="contact-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+            </span>
+          </a>
+          <a class="contact-card" href="https://github.com/AceIce1666" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+            <span class="contact-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            </span>
+          </a>
+          <a class="contact-card" href="https://space.bilibili.com/1915194275" target="_blank" rel="noopener" aria-label="B站主页" title="B站主页">
+            <span class="contact-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.4 2.1 10.3 5h3.4l2.9-2.9a1 1 0 0 1 1.4 1.4L16.4 5H18a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h1.6L6 3.5a1 1 0 0 1 1.4-1.4ZM18 7H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Zm-8.5 3.5a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Zm5 0a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Z"/>
+              </svg>
+            </span>
+          </a>
+        </div>
+
+        <!-- QQ / 邮箱：点击复制（与页面上「联系我」栏目一致） -->
+        <div class="contact-info-grid">
+          <button class="contact-card" id="qq-btn" type="button" data-qq="227015198" aria-label="QQ 号 227015198，点击复制" title="点击复制 QQ 号">
+            <span class="contact-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.395 15.035a40 40 0 0 0-.803-2.264l-1.079-2.695c.001-.032.014-.562.014-.836C19.526 4.632 17.351 0 12 0S4.474 4.632 4.474 9.241c0 .274.013.804.014.836l-1.08 2.695a39 39 0 0 0-.802 2.264c-1.021 3.283-.69 4.643-.438 4.673.54.065 2.103-2.472 2.103-2.472 0 1.469.756 3.387 2.394 4.771-.612.188-1.363.479-1.845.835-.434.32-.379.646-.301.778.343.578 5.883.369 7.482.189 1.6.18 7.14.389 7.483-.189.078-.132.132-.458-.301-.778-.483-.356-1.233-.646-1.846-.836 1.637-1.384 2.393-3.302 2.393-4.771 0 0 1.563 2.537 2.103 2.472.251-.03.581-1.39-.438-4.673"/></svg>
+            </span>
+            <span class="contact-info">
+              <span class="contact-name">QQ</span>
+              <span class="contact-text contact-text-num">227015198</span>
+            </span>
+          </button>
+
+          <button class="contact-card" id="mail-btn" type="button" data-mail="aliangsama@qq.com" aria-label="邮箱 aliangsama@qq.com，点击复制" title="点击复制邮箱">
+            <span class="contact-icon contact-icon-emoji" aria-hidden="true">✉️</span>
+            <span class="contact-info">
+              <span class="contact-name">邮箱</span>
+              <span class="contact-text">aliangsama@qq.com</span>
+            </span>
+          </button>
+        </div>
+
+        <p class="modal-note">点 QQ / 邮箱可以一键复制</p>
+      </div>
+    </div>
+
+    <!-- 关于主页弹窗：创建时间 + 访问次数（次数来自网络计数服务，真实累加） -->
+    <div id="home-overlay" class="modal-overlay" data-modal>
+      <div class="modal-panel" role="dialog" aria-label="关于主页">
+        <button class="modal-close" type="button" data-close aria-label="关闭">✕</button>
+        <h3 class="modal-title">关于主页</h3>
+
+        <div class="stat-list">
+          <div class="stat-row">
+            <span class="stat-label">网站创建时间</span>
+            <span class="stat-value" id="site-created">2026 年 10 月 6 日</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">总访问次数</span>
+            <span class="stat-value stat-value-num" id="visit-count">— —</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">已经运行</span>
+            <span class="stat-value" id="site-days">— —</span>
+          </div>
+        </div>
+
+        <p class="modal-note" id="visit-note">每次打开页面，访问次数自动 +1</p>
+      </div>
+    </div>
+
+    <!-- ============ 第三部分：一些有趣的网站（整块可折叠） ============ -->
+    <section class="sites" id="sites" data-bar="🌐 一些我觉得好玩的网站">
+      <!-- 点这一整块标题区域即可收起 / 展开下面的网站卡片 -->
+      <button class="site-head" id="sites-toggle" type="button" aria-expanded="true" aria-controls="sites-body" title="点击收起 / 展开">
+        <h2>一些有趣的网站</h2>
+        <p class="sub">觉得好玩的网站，分享给你</p>
+        <span class="toggle-mark" aria-hidden="true"><span class="tm-arrow">▼</span><span class="tm-text">点击收起</span></span>
+      </button>
+
+      <div class="site-body" id="sites-body">
+       <div class="site-pad">
+        <div class="site-grid" data-reveal>
+          <!-- 最上面两个：常用大站的官网 -->
+          <a class="site-card" href="https://www.bilibili.com/" target="_blank" rel="noopener">
+            <div class="site-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                <path d="M7.4 2.1 10.3 5h3.4l2.9-2.9a1 1 0 0 1 1.4 1.4L16.4 5H18a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h1.6L6 3.5a1 1 0 0 1 1.4-1.4ZM18 7H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Zm-8.5 3.5a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Zm5 0a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Z"/>
+              </svg>
+            </div>
+            <div class="site-info">
+              <h3>哔哩哔哩 B站</h3>
+              <p>刷网课，追番剧，看 vtb，你能想到的应有尽有。</p>
+            </div>
+          </a>
+
+          <a class="site-card" href="https://github.com/" target="_blank" rel="noopener">
+            <div class="site-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+              </svg>
+            </div>
+            <div class="site-info">
+              <h3>GitHub</h3>
+              <p>开源社区，IT 狂喜　我也要写代码吗（滑稽）</p>
+            </div>
+          </a>
+
+          <a class="site-card" href="https://aidn.jp/mikutap/" target="_blank" rel="noopener">
+            <div class="site-icon" aria-hidden="true">
+              <img src="miku-icon.jpg" alt="Mikutap 图标">
+            </div>
+            <div class="site-info">
+              <h3>Mikutap</h3>
+              <p>以初音未来为主题的音乐互动小玩具，点击屏幕 / 敲键盘就能即兴演奏。</p>
+            </div>
+          </a>
+
+          <a class="site-card" href="https://www.emojiall.com/zh-hans" target="_blank" rel="noopener">
+            <div class="site-icon site-icon-emoji" aria-hidden="true">😜</div>
+            <div class="site-info">
+              <h3>EmojiAll · Emoji 大全</h3>
+              <p>收录全部 Emoji 表情的含义、图片和复制玩法，找表情来这里。</p>
+            </div>
+          </a>
+
+          <a class="site-card" href="https://www.nyan.cat/" target="_blank" rel="noopener">
+            <div class="site-icon" aria-hidden="true">
+              <img class="icon-cover" src="nyan-icon.jpg" alt="NYAN.CAT 图标">
+            </div>
+            <div class="site-info">
+              <h3>NYAN.CAT</h3>
+              <p>NYAN NYAN NYAN NYAN NYAN NYAN !</p>
+            </div>
+          </a>
+
+          <a class="site-card" href="https://ievent.life/" target="_blank" rel="noopener">
+            <div class="site-icon" aria-hidden="true">
+              <img src="ievent-icon.jpg" alt="推活日记图标">
+            </div>
+            <div class="site-info">
+              <h3>推活日记</h3>
+              <p>不管是 Live、见面会还是演出情报，都能在这里快速查看。</p>
+            </div>
+          </a>
+
+          <!-- 以后想加新网站：复制上面这张卡片，改链接、图标和文字即可 -->
+        </div>
+       </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <!-- 回到顶部：小小的一个，放在页脚最上面（版权那行上面） -->
+    <button class="to-top" id="to-top" type="button" aria-label="回到页面顶部">↑ 回到顶部</button>
+    <div>© 2026 AceIce | 祈蘭</div>
+    <!-- 创建时间 / 访问次数由页面脚本填充（和「关于主页」弹窗同一份数据） -->
+    <div class="footer-stats">
+      <span class="footer-stat">网页创建于 <span class="num" id="foot-created">2026 年 10 月 6 日</span></span>
+      <span class="footer-stat">总访问次数 <span class="num" id="foot-visits">— —</span></span>
+    </div>
+  </footer>
+
+  <div id="toast" role="status"></div>
+
+  <!-- 滚动浮动字幕条：往下滑时出现，随所在栏目换文案（内容是脚本按 data-bar 取的） -->
+  <div id="float-bar" class="float-bar" aria-hidden="true">
+    <span class="float-dot"></span>
+    <span class="float-text" id="float-text">往下滑，慢慢看</span>
+  </div>
+
+<script>
+/* ---------- 左上角实时时钟（与现实时间同步） ---------- */
+try {
+  (function () {
+    var timeEl = document.getElementById("clock-time");
+    var dateEl = document.getElementById("clock-date");
+    if (!timeEl || !dateEl) return;
+    var WEEK = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    function tickClock() {
+      var d = new Date();
+      timeEl.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+      dateEl.textContent = (d.getMonth() + 1) + "月" + d.getDate() + "日 " + WEEK[d.getDay()];
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+  })();
+} catch (e) { /* 时钟异常忽略，不影响页面 */ }
+
+/* ---------- 弹窗：听首歌吧 + 关于我 ---------- */
+try {
+  (function () {
+    function bindPopup(btnId, overlayId, closeId) {
+      var btn = document.getElementById(btnId);
+      var overlay = document.getElementById(overlayId);
+      var closeBtn = document.getElementById(closeId);
+      if (!btn || !overlay) return;
+      btn.addEventListener("click", function () { overlay.classList.add("open"); });
+      if (closeBtn) closeBtn.addEventListener("click", function () { overlay.classList.remove("open"); });
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) overlay.classList.remove("open");
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") overlay.classList.remove("open");
+      });
+    }
+    bindPopup("music-btn", "music-overlay", "music-close");
+
+    /* ============================================================
+     * 播放器：主页「听首歌吧」栏目 与 弹窗 共用同一个 <audio>，
+     * 所以两边的歌不会同时响 —— 在一边播放，另一边自然就停了。
+     * ============================================================ */
+    var player = document.getElementById("music-player");
+    var disc = document.getElementById("disc");
+    var discNote = document.getElementById("disc-note");
+    var coverLg = document.getElementById("music-cover-lg");
+    var nowEl = document.getElementById("music-now");
+    var tip = document.querySelector(".music-tip");
+    var tips = document.querySelectorAll(".music-tip");
+    var items = document.querySelectorAll(".music-play");
+    var curEls = [document.getElementById("music-cur"), document.getElementById("music-cur-2")];
+    var durEls = [document.getElementById("music-dur"), document.getElementById("music-dur-2")];
+    var seeks = [document.getElementById("music-seek"), document.getElementById("music-seek-2")];
+    var modeBtns = document.querySelectorAll(".music-mode");
+    if (player) player.preload = "auto";
+
+    function setTip(msg) {
+      for (var i = 0; i < tips.length; i++) tips[i].textContent = msg;
+    }
+    function fmt(t) {
+      if (!isFinite(t) || t < 0) return "0:00";
+      var m = Math.floor(t / 60), s = Math.floor(t % 60);
+      return m + ":" + (s < 10 ? "0" : "") + s;
+    }
+    function currentSrc() {
+      return (player.currentSrc || player.src || "").split("/").pop();
+    }
+    function trackTitle(src) {
+      var name = "";
+      items.forEach(function (it) {
+        if (it.getAttribute("data-src") === src) {
+          var sp = it.querySelectorAll("span");
+          if (sp.length > 1) name = sp[1].textContent;
+        }
+      });
+      return name;
+    }
+    function updateSongIcons() {
+      var cur = currentSrc();
+      var playing = !player.paused;
+      items.forEach(function (it) {
+        var src = it.getAttribute("data-src");
+        var icon = it.querySelector("span");
+        if (icon) icon.textContent = (src === cur && playing) ? "⏸" : "▶";
+      });
+    }
+    function syncModeBtns() {
+      for (var i = 0; i < modeBtns.length; i++) {
+        modeBtns[i].classList.toggle("loop", loopMode);
+      }
+    }
+    /* 封面图不存在时（比如某首歌引用的封面还没放进目录）不要留一个空转盘，
+       自动退回第一首歌的封面 + 🎵 占位；已经确认缺失的封面记下来，不用反复请求 */
+    var badCovers = {}, coverSeq = 0;
+    function applyCover(url) {
+      var img = url ? 'url("' + url + '")' : 'url("1.png")';
+      if (disc) disc.style.backgroundImage = img;
+      if (discNote) discNote.style.display = url ? "none" : "";
+      if (coverLg) coverLg.style.backgroundImage = img;
+    }
+    function updateCover(url) {
+      var my = ++coverSeq;         /* 连续切歌时，丢掉过期的回调 */
+      if (!url || badCovers[url] || typeof Image !== "function") { applyCover(url && !badCovers[url] ? url : ""); return; }
+      var probe = new Image();
+      probe.onload = function () { if (my === coverSeq) applyCover(url); };
+      probe.onerror = function () { badCovers[url] = 1; if (my === coverSeq) applyCover(""); };
+      probe.src = url;
+    }
+    /* 把「正在放什么」同步到两边的界面 */
+    function sync() {
+      var cur = currentSrc();
+      var playing = !player.paused;
+      var title = trackTitle(cur);
+      if (nowEl) nowEl.textContent = cur ? ((playing ? "正在播放：" : "已暂停：") + title) : "还没选歌，点下面的歌名开始播放";
+      if (disc) disc.classList.toggle("playing", playing);
+      if (coverLg) coverLg.classList.toggle("playing", playing);
+      var dur = fmt(player.duration);
+      for (var i = 0; i < 2; i++) {
+        if (durEls[i]) durEls[i].textContent = dur;
+        if (curEls[i]) curEls[i].textContent = fmt(player.currentTime);
+        if (seeks[i] && player.duration) seeks[i].value = (player.currentTime / player.duration) * 100;
+      }
+      updateSongIcons();
+    }
+
+    /* 播放模式：顺序播放 / 单曲循环（主页和弹窗的两个按钮联动） */
+    var loopMode = false;
+    for (var m = 0; m < modeBtns.length; m++) {
+      (function (btn) {
+        btn.addEventListener("click", function () {
+          loopMode = !loopMode;
+          syncModeBtns();
+          if (typeof toast === "function") toast(loopMode ? "♪ 单曲循环" : "♪ 顺序播放");
+        });
+      })(modeBtns[m]);
+    }
+
+    /* 点歌名：播放 / 暂停（两个列表共用） */
+    items.forEach(function (it) {
+      it.addEventListener("click", function () {
+        var src = it.getAttribute("data-src");
+        var cover = it.getAttribute("data-cover") || "";
+        if (!src) { setTip("这首歌还没上传，敬请期待～"); return; }
+        /* 点同一首歌：暂停 / 继续（另一边也会同步停） */
+        if (currentSrc() === src) {
+          if (player.paused) { player.play(); } else { player.pause(); }
+          sync();
+          return;
+        }
+        /* 换歌 */
+        updateCover(cover);
+        player.src = src;
+        var p = player.play();
+        if (p && p.catch) {
+          p.catch(function () {
+            setTip("播放失败：请确认歌曲文件和 home.html 在同一个文件夹里");
+          });
+        }
+        sync();
+      });
+    });
+
+    /* 两条进度条都能拖 */
+    for (var s = 0; s < seeks.length; s++) {
+      (function (seek) {
+        if (!seek) return;
+        seek.addEventListener("input", function () {
+          if (!player.duration) return;
+          player.currentTime = (parseFloat(seek.value) / 100) * player.duration;
+          sync();
+        });
+      })(seeks[s]);
+    }
+
+    player.addEventListener("loadedmetadata", function () { sync(); });
+    player.addEventListener("timeupdate", function () { sync(); });
+    player.addEventListener("play", function () { sync(); });
+    player.addEventListener("pause", function () { sync(); });
+    player.addEventListener("ended", function () {
+      /* 单曲循环：从头重播 */
+      if (loopMode) {
+        player.currentTime = 0;
+        player.play();
+        sync();
+        return;
+      }
+      /* 顺序播放：自动切下一首（从当前这首在两个列表里的顺序往后找一首"有文件"的） */
+      var cur = currentSrc();
+      var seen = [], list = [];
+      items.forEach(function (it) {
+        var src = it.getAttribute("data-src");
+        if (!src || seen.indexOf(src) >= 0) return;   /* 两个列表里重复的同一首歌只算一次 */
+        seen.push(src);
+        list.push(it);
+      });
+      var idx = -1;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].getAttribute("data-src") === cur) idx = i;
+      }
+      if (idx < 0 || !list.length) { sync(); return; }
+      var next = list[(idx + 1) % list.length];
+      var src2 = next.getAttribute("data-src");
+      updateCover(next.getAttribute("data-cover") || "");
+      player.src = src2;
+      player.play();
+      sync();
+    });
+    player.addEventListener("error", function () {
+      /* 还没点过播放时的加载错误不提示，避免开页面就弹错误 */
+      if (!currentSrc()) { sync(); return; }
+      setTip("音频加载失败：请确认歌曲文件和 home.html 在同一个文件夹里");
+      sync();
+    });
+    sync();
+  })();
+} catch (e) { /* 弹窗模块异常忽略 */ }
+
+/* ============================================================
+ * 背景小恐龙（Chromium 开源版 T-Rex Runner 原版贴图与物理）
+ * 贴图已静态写在 HTML 的 <img> 里：即使脚本不运行也有恐龙。
+ * 这里只负责奔跑、换帧与自动跳跃，整体包在 try 中，
+ * 任何异常都不影响页面其他功能。
+ * ============================================================ */
+try {
+  (function () {
+    var runner = document.getElementById("dino-runner");
+    var dinoEl = document.getElementById("dino-sprite");
+    var jumper = document.getElementById("dino-jump");   /* 跳跃 / 抖动写在这一层 */
+    var cactusImgs = document.querySelectorAll(".cactus-img");
+    if (!runner || !dinoEl) return;
+    if (!jumper) jumper = runner;   /* 万一结构变了，退回原来的行为 */
+
+    var SPR_STAND = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAvCAYAAACYECivAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAD+SURBVGhD7ZBBDsJQCAV7x97/HF3qRoyZSACBb9oyydv0A2/SbWviOI5HZXi/HBZmw/tlsGjf91RGmFSJMm3imrDA796MsKAJZzPCwgi/MsLC5YVl3hv2pVkmrD444T7FojE9WMh3C+5TIBrVgwXq4BcoGRHlnhZ2Xl+YBz93I+ENq/cNS61FFvxd2DqozWdzP2Eesuai4b37CneFP2KEq+MWJKcTFlaLn0Y4LUq6xUdYqBaXeyNMsuLLRIXTClvi2jv3eb8cFlKIYtr3ZcKCJaTN8X0ZFNGEOMf3ZXhFvHPteEW8c+1QRBPyzrXjFfHOtSOFWqJz7bCYic79yhMOXgR1uLNFAQAAAABJRU5ErkJggg==";
+    var SPR_RUN2 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAvCAYAAACYECivAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADxSURBVGhD7ZBBDsMwCATzR///HTm2lxJVoyKMgKROGGkvAbOjbFsR+76/MsP76bAwGt5Pg0VjjFBamGSJMmXimrDA77NpYUETjqaFhRb+pIWF2wvL/mzYF+Y0YXUwCd9TzBvTg4WcW/A9BbxRPVigLv6Akh5RvtPCzvsL8+D3W094w+o9YKn1kAWXC1sHtf1onifMQ9aeN7z3XOGq8Ee0cHamBclywsLZ4ssIh0VJtXgLC9nicq+FSVT8NFFhWWFN3Dvn/XRYaAlZc94vg8WWGL/zXjmaEMU4v0xYoBiFWrgaCv+9+LLCWrh/ORRkuO/lDWBRtjYcljbpAAAAAElFTkSuQmCC";
+    var SPR_RUN1 = dinoEl.getAttribute("src");   /* 静态帧，来自 HTML */
+
+    /* 预加载换帧图片，避免闪动 */
+    [SPR_STAND, SPR_RUN2].forEach(function (uri) {
+      var im = new Image();
+      im.src = uri;
+    });
+
+    /* ===== 照搬原版架构：恐龙固定在原地跑，世界（仙人掌）向左滚动 ===== */
+    var DINO_X = window.innerWidth * 0.12;   /* 恐龙固定横坐标（类似原版 x=50） */
+    var speed = 360;                         /* px/s（原版最低速 6px/帧 = 360px/s） */
+    var LEAD = 36;
+    var jumping = false;
+    var frameTimer = 0;
+    var runFrame = false;
+    var lastTime = performance.now();
+
+    /* 原版跳跃物理（Trex.config + updateJump 原版数值） */
+    var GRAVITY = 0.6;
+    var JUMP_VELOCITY_BASE = 10;
+    var MIN_JUMP_HEIGHT = 30;
+    var MAX_JUMP_HEIGHT = 63;
+    var DROP_VELOCITY = -5;
+    var yPos = 0;
+    var jumpVelocity = 0;
+    var reachedMinHeight = false;
+
+    /* 碰撞惩罚：被仙人掌扎到 → 画面回退一段 + 恐龙抖动 → 重新跳跃 */
+    var HIT_REWIND_DIST = 140;   /* 回退距离（px） */
+    var HIT_REWIND_SPEED = 300;  /* 回退速度（px/s） */
+    var hit = { active: false, left: 0, timer: 0 };
+
+    /* 4 棵仙人掌：横坐标由 JS 驱动，从右向左滚动，
+       出左边界后回到队尾（原版障碍物回收机制） */
+    var cacti = [];
+    var spacing = 0;
+    function layoutCacti() {
+      /* 仙人掌间距必须大于「腾空时间 × 速度」，否则前一颗还没落地、
+         下一颗就到跟前，恐龙会来不及跳（手机窄屏尤其明显） */
+      spacing = Math.max(280, (window.innerWidth - DINO_X - 60 + 160) / 4);
+      runner.style.left = DINO_X + "px";
+      for (var i = 0; i < cacti.length; i++) {
+        cacti[i].x = DINO_X + 220 + i * spacing;
+        cacti[i].cleared = false;
+        /* 用 transform 移动（GPU 合成），避免每帧改 left 触发重排 */
+        cacti[i].el.style.left = "0px";
+        cacti[i].el.style.transform = "translateX(" + cacti[i].x + "px)";
+      }
+    }
+    cactusImgs.forEach(function (el) {
+      cacti.push({ el: el, x: 0, cleared: false });
+    });
+    layoutCacti();
+
+    function startJump() {
+      if (jumping || hit.active) return;
+      jumping = true;
+      reachedMinHeight = false;
+      jumpVelocity = -(JUMP_VELOCITY_BASE + speed / 600);
+      dinoEl.src = SPR_STAND;
+    }
+
+    function updateJump(framesElapsed) {
+      yPos += jumpVelocity * framesElapsed;
+      jumpVelocity += GRAVITY * framesElapsed;
+      if (yPos < -MIN_JUMP_HEIGHT) reachedMinHeight = true;
+      if (yPos < -MAX_JUMP_HEIGHT && reachedMinHeight && jumpVelocity < DROP_VELOCITY) {
+        jumpVelocity = DROP_VELOCITY;
+      }
+      if (yPos > 0) {
+        yPos = 0;
+        jumpVelocity = 0;
+        jumping = false;
+        runFrame = false;
+      }
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (e.code === "Space" || e.code === "ArrowUp" || e.keyCode === 32 || e.keyCode === 38) {
+        e.preventDefault();
+        startJump();
+      }
+    });
+
+    /* 手机适配：点屏幕任意空白处让恐龙跳一下（点链接/按钮不受影响） */
+    document.addEventListener("touchstart", function (e) {
+      var t = e.target;
+      if (t && (t.tagName === "A" || t.tagName === "BUTTON")) return;
+      startJump();
+    }, { passive: true });
+
+    function updateSpeed() {
+      speed = Math.max(360, window.innerWidth * 0.15);
+      LEAD = 0.1 * speed;
+    }
+
+    function tick(now) {
+      try {
+        var dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        /* 世界滚动：正常向左；被扎到后短暂向右回退 */
+        var scrollStep = speed * dt;
+        if (hit.active) {
+          var rewind = Math.min(hit.left, HIT_REWIND_SPEED * dt);
+          hit.left -= rewind;
+          hit.timer += dt;
+          scrollStep = -rewind;   /* 负值 = 向右回退 */
+          if (hit.left <= 0) hit.active = false;
+        }
+        for (var i = 0; i < cacti.length; i++) {
+          var c = cacti[i];
+          c.x -= scrollStep;
+          if (c.x < -50) {
+            c.x += 4 * spacing;   /* 出左边界 → 回到队尾 */
+            c.cleared = false;
+          }
+          c.el.style.transform = "translateX(" + c.x + "px)";
+        }
+
+        /* 奔跑两帧交替：原版 1000/12 毫秒 = 1/12 秒一帧 */
+        if (jumping) {
+          updateJump(dt * 60);   /* dt 秒 × 60 = 60fps 帧数 */
+        } else {
+          frameTimer += dt;
+          if (frameTimer >= 1 / 12) {
+            frameTimer = 0;
+            runFrame = !runFrame;
+            dinoEl.src = runFrame ? SPR_RUN2 : SPR_RUN1;
+          }
+        }
+
+        /* 自动起跳：仙人掌左缘进入「恐龙前缘 + 提前量」范围时起跳 */
+        var dinoFront = DINO_X + 88;
+        if (!hit.active) {
+          for (var j = 0; j < cacti.length; j++) {
+            var cc = cacti[j];
+            if (cc.cleared) continue;
+            if (cc.x <= dinoFront + LEAD) {
+              startJump();
+              cc.cleared = true;
+            }
+          }
+        }
+
+        /* 碰撞检测：落地撞上仙人掌 → 触发「被扎回退」 */
+        if (!jumping && !hit.active) {
+          for (var m = 0; m < cacti.length; m++) {
+            var hc = cacti[m];
+            if (hc.x + 4 < DINO_X + 74 && hc.x + 30 > DINO_X + 14) {
+              hc.cleared = false;   /* 回退后重新触发跳跃 */
+              hit.active = true;
+              hit.left = HIT_REWIND_DIST;
+              hit.timer = 0;
+              break;
+            }
+          }
+        }
+
+        /* 恐龙横坐标固定；被扎到时左右抖一下（“哎哟”感）
+         * 注意：跳跃/抖动写在里层的 #dino-jump 上，
+         * 外层 #dino-runner 的 transform 留给背景视差用 —— 两个动效各写各的元素，不会互相覆盖。 */
+        var shakeX = 0;
+        if (hit.active) {
+          shakeX = (Math.floor(hit.timer * 18) % 2 === 0) ? 4 : -4;
+        }
+        jumper.style.transform = "translate(" + shakeX + "px," + (jumping ? yPos * 2 : 0) + "px)";
+      } catch (e) { /* 单帧异常不中断循环 */ }
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", function () {
+      updateSpeed();
+      DINO_X = window.innerWidth * 0.12;
+      layoutCacti();
+    });
+
+    updateSpeed();
+    requestAnimationFrame(tick);
+  })();
+} catch (e) { /* 恐龙模块异常时忽略，不影响页面其他部分 */ }
+
+/* ---------- 翼龙：隔一会儿从天上飞过一次 ----------
+ * 1) 慢悠悠横穿画面，从右往左飞（和原版一致：它本来就是朝左画的）
+ * 2) 高度在几档之间随机，避免每次都在同一条线上
+ * 3) 点它 → 俯冲一下再飞走；按 ↓ / 摸它一下也一样（致敬原版 T-Rex 的 ↓ 动作）
+ * 想调频率：改下面 MIN_GAP / MAX_GAP（毫秒）；想调速度：改 SPEED
+ */
+try {
+  (function () {
+    var el = document.getElementById("ptero");
+    if (!el) return;
+    var MIN_GAP = 3500;      /* 最短隔 3.5 秒飞一次（比以前勤快） */
+    var MAX_GAP = 8000;      /* 最长隔 8 秒 */
+    var SPEED = 140;         /* px/秒（恐龙是世界在跑，翼龙慢慢飞） */
+    var flying = false, x = 0, y = 0, diving = false, dy = 0, dyTarget = 0;
+    var rafId = 0;
+
+    function pickHeight() {
+      /* 20% ~ 46% 视口高度：在天上、又不挡首屏文字 */
+      var vh = window.innerHeight;
+      return vh * (0.20 + Math.random() * 0.26);
+    }
+
+    /* 位移完全由这里自己算，【不用 CSS transition】。
+       为什么不用 transition：它会被别的 CSS 规则覆盖。以前「减弱动态效果」
+       那段里有一句 `#ptero { transition: transform 0.6s ease !important; }`，
+       把十几秒的飞行硬压成 0.6 秒 —— 在开了「减少动画」的电脑上，
+       翼龙就是「嗖」一下消失，看着等于根本没有翼龙。
+       自己用 requestAnimationFrame 算位移之后，任何 CSS 规则都影响不到它。 */
+    function startFlight() {
+      if (flying) return;
+      flying = true;
+      diving = false;
+      dy = 0;
+      dyTarget = 0;
+      el.classList.add("flap");
+      el.classList.remove("dive");
+      var W = window.innerWidth || 1200;
+      var from = W + 70;            /* 从屏幕右边外面飞进来 */
+      var to = -160;                /* 往左飞出去 */
+      y = pickHeight();
+      el.style.top = y + "px";
+      x = from;
+      el.style.transform = "translate(" + from + "px, 0)";
+      var dur = ((from - to) / SPEED) * 1000;   /* 飞完全程要多久（毫秒） */
+      var t0 = 0;
+      function step(ts) {
+        if (!flying) return;
+        if (!t0) t0 = ts;
+        var k = (ts - t0) / dur;
+        if (k >= 1) { endFlight(); return; }
+        x = from + (to - from) * k;
+        dy += (dyTarget - dy) * 0.12;           /* 俯冲时平滑往下 */
+        el.style.transform = "translate(" + x.toFixed(1) + "px, " + dy.toFixed(1) + "px)";
+        rafId = requestAnimationFrame(step);
+      }
+      rafId = requestAnimationFrame(step);
+    }
+    function endFlight() {
+      flying = false;
+      if (rafId && typeof cancelAnimationFrame === "function") { cancelAnimationFrame(rafId); }
+      rafId = 0;
+      el.classList.remove("flap", "dive");
+      x = -160;
+      el.style.transform = "translate(-160px, 0)";
+      el.style.opacity = "";
+      schedule();
+    }
+    var firstFlight = true;   /* 第一次飞得早一点，打开页面就能看见，不用等十几秒 */
+    function schedule() {
+      var wait;
+      if (firstFlight) {
+        firstFlight = false;
+        wait = 1200 + Math.random() * 800;           /* 1.2 ~ 2 秒 */
+      } else {
+        wait = MIN_GAP + Math.random() * (MAX_GAP - MIN_GAP);
+      }
+      setTimeout(startFlight, wait);
+    }
+    /* 点它 / 按 ↓ → 往下俯冲一小段（纯好看，不影响别的功能） */
+    function dive() {
+      if (!flying || diving) return;
+      diving = true;
+      dyTarget = 90;
+      el.classList.add("dive");
+    }
+    el.addEventListener("click", function (e) {
+      e.stopPropagation();   /* 别把"点屏幕冒粒子"也触发得太大 */
+      dive();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.code === "ArrowDown" || e.keyCode === 40) dive();
+    });
+
+    /* ---------- 自检模式（正常使用完全不影响） ----------
+       在地址后面加 #ptero-test 再按回车，例如：
+         你的主页地址/home.html#ptero-test
+       翼龙会变成一只带红色描边的大家伙，几乎一直在飞。
+       用途：如果普通模式看不见、自检模式也看不见，说明是渲染 / 层级问题；
+             自检模式能看见，就说明只是「太小太快没注意到」。 */
+    if (typeof location !== "undefined" && location.hash === "#ptero-test") {
+      el.style.width = "200px";
+      el.style.height = "174px";
+      el.style.opacity = "1";
+      el.style.boxShadow = "0 0 0 3px #f33";
+      el.style.backgroundColor = "rgba(255,0,0,0.18)";   /* 用 background-color，别用 background，否则会把贴图覆盖掉 */
+      MIN_GAP = 400;
+      MAX_GAP = 700;
+      setTimeout(startFlight, 300);
+      return;      /* 注意：这里 return 掉了，后面那句 schedule() 不会执行（自检模式自己会循环） */
+    }
+
+    schedule();   /* 页面上先等一会儿再出现，别一开始就吓一跳 */
+  })();
+} catch (e) { /* 翼龙异常不影响页面 */ }
+
+/* ---------- 夜晚的星星：切到黑夜才亮起来 ----------
+ * 数量、大小、闪烁快慢都随机；
+ * 想加流星频率：搜 shooting-star 的 animation-duration（越小越勤）
+ */
+try {
+  (function () {
+    var box = document.getElementById("stars");
+    if (!box) return;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var n = reduce ? 30 : 90;
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < n; i++) {
+      var s = document.createElement("i");
+      s.className = "star";
+      var size = (Math.random() * 2 + 1).toFixed(1);   /* 1 ~ 3px */
+      s.style.width = size + "px";
+      s.style.height = size + "px";
+      s.style.left = (Math.random() * 100).toFixed(2) + "%";
+      s.style.top = (Math.random() * 100).toFixed(2) + "%";
+      s.style.setProperty("--dur", (2.5 + Math.random() * 5).toFixed(2) + "s");
+      s.style.setProperty("--delay", (-Math.random() * 8).toFixed(2) + "s");
+      s.style.setProperty("--min-o", (0.15 + Math.random() * 0.3).toFixed(2));
+      s.style.setProperty("--max-o", (0.7 + Math.random() * 0.3).toFixed(2));
+      /* 小星星再多一点点光晕，大一点的才有 */
+      if (Math.random() > 0.7) s.style.boxShadow = "0 0 4px 1px rgba(255,255,255,0.55)";
+      frag.appendChild(s);
+    }
+    box.appendChild(frag);
+  })();
+} catch (e) { /* 星星异常不影响页面 */ }
+
+/* 三个弹窗的 id：设置菜单、关闭逻辑、Esc 都共用这一份 */
+var MODAL_IDS = ["music-overlay", "contact-overlay", "home-overlay"];
+
+/* ============================================================
+ * 板块跳转配置 —— 想改「设置」里的跳转菜单，只改这里就行
+ *   id     ：要跳到哪一屏（就是页面上 id="..." 的名字）
+ *   label  ：菜单里显示的名字
+ *   action ："scroll" = 滚动到那一屏；"modal" = 打开对应弹窗
+ *   想加一项：复制一行改掉内容即可（弹窗需要同时加进 MODAL_IDS）
+ * ============================================================ */
+var SITE_CONFIG = {
+  nav: [
+    { id: "hero",    label: "回到顶部",       action: "scroll" },
+    { id: "projects", label: "近期项目",       action: "scroll" },
+    { id: "doing",   label: "最近在做",       action: "scroll" },
+    { id: "about",   label: "关于我",         action: "scroll" },
+    { id: "contact", label: "联系我（图标）",  action: "scroll" },
+    { id: "sites",   label: "一些有趣的网站",  action: "scroll" },
+    { id: "listen",  label: "听首歌吧",       modal: "music-overlay" },
+    { id: "reach",   label: "联系我（弹窗）",  modal: "contact-overlay" },
+    { id: "home",    label: "关于主页",       modal: "home-overlay" }
+  ]
+};
+
+/* ---------- 右上角设置面板：白天 / 黑夜 + 板块直达 ---------- */
+try {
+  (function () {
+    var btn = document.getElementById("theme-toggle");
+    var panel = document.getElementById("settings-panel");
+    var navBox = document.getElementById("settings-nav");
+    if (!btn || !panel) return;
+
+    /* ===== 主题：白天 / 黑夜 ===== */
+    var themeBtns = panel.querySelectorAll("[data-theme]");
+
+    function applyTheme(night) {
+      document.body.classList.toggle("night", night);
+      /* 右上角固定显示设置图标，主题只体现在面板里的选中状态 */
+      for (var i = 0; i < themeBtns.length; i++) {
+        var isOn = (themeBtns[i].getAttribute("data-theme") === "night") === night;
+        themeBtns[i].classList.toggle("active", isOn);
+        themeBtns[i].setAttribute("aria-checked", isOn ? "true" : "false");
+      }
+    }
+
+    /* 记住上次选择（file:// 下部分浏览器禁止本地存储，忽略即可） */
+    var savedNight = false;
+    try { savedNight = localStorage.getItem("dino-theme") === "night"; } catch (e) { }
+    applyTheme(savedNight);
+
+    for (var t = 0; t < themeBtns.length; t++) {
+      themeBtns[t].addEventListener("click", function () {
+        var night = this.getAttribute("data-theme") === "night";
+        applyTheme(night);
+        try { localStorage.setItem("dino-theme", night ? "night" : "day"); } catch (e) { }
+        if (typeof toast === "function") toast(night ? "🌙 已切换黑夜" : "☀️ 已切换白天");
+      });
+    }
+
+    /* ===== 动效开关：关掉后所有入场动画 / 呼吸灯都停，页面变静态 ===== */
+    var motionBtn = document.getElementById("motion-toggle");
+    function applyMotion(on) {
+      document.body.classList.toggle("no-motion", !on);
+      if (motionBtn) {
+        motionBtn.textContent = on ? "✨ 动效开" : "🌿 动效关";
+        motionBtn.classList.toggle("active", on);
+        motionBtn.setAttribute("aria-checked", on ? "true" : "false");
+      }
+      if (!on) {
+        /* 已经隐藏起来的内容要立刻显示出来，别留一片空白 */
+        var hidden = document.querySelectorAll("[data-reveal]");
+        for (var i = 0; i < hidden.length; i++) hidden[i].classList.add("in");
+      }
+    }
+    var savedMotion = true;
+    try { savedMotion = localStorage.getItem("dino-motion") !== "off"; } catch (e) { }
+    applyMotion(savedMotion);
+    if (motionBtn) {
+      motionBtn.addEventListener("click", function () {
+        var on = document.body.classList.contains("no-motion");   /* 现在是关的 → 这次就打开 */
+        applyMotion(on);
+        try { localStorage.setItem("dino-motion", on ? "on" : "off"); } catch (e) { }
+        if (typeof toast === "function") toast(on ? "✨ 动效已打开" : "🌿 动效已关闭");
+      });
+    }
+
+    /* ===== 面板开合 ===== */
+    function openPanel() {
+      panel.classList.add("open");
+      btn.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+    }
+    function closePanel() {
+      panel.classList.remove("open");
+      btn.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    }
+    function togglePanel() {
+      if (panel.classList.contains("open")) { closePanel(); } else { openPanel(); }
+    }
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      togglePanel();
+    });
+    /* 点面板以外的地方 / 按 Esc 就收起来 */
+    document.addEventListener("click", function (e) {
+      if (!panel.classList.contains("open")) return;
+      if (e.target === btn || btn.contains(e.target)) return;
+      if (panel.contains(e.target)) return;
+      closePanel();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closePanel();
+    });
+
+    /* ===== 跳转 ===== */
+    /* 跳到某一屏：修正固定顶栏（时钟/按钮）的遮挡，留出一点余量 */
+    function scrollToId(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var y = el.getBoundingClientRect().top + window.pageYOffset - 16;
+      try {
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      } catch (err) {
+        window.scrollTo(0, Math.max(0, y));
+      }
+    }
+
+    /* 跳转配置里 action 与弹窗 id 的对应关系：菜单里的 id → 弹窗 id */
+    var MODALS = { music: "music-overlay", contact: "contact-overlay", home: "home-overlay" };
+
+    /* 打开某个弹窗前，先把其它弹窗关掉，避免两个叠在一起 */
+    function openModal(id) {
+      for (var i = 0; i < MODAL_IDS.length; i++) {
+        var box = document.getElementById(MODAL_IDS[i]);
+        if (!box) continue;
+        if (MODAL_IDS[i] === id) box.classList.add("open");
+        else box.classList.remove("open");
+      }
+    }
+
+    function go(item) {
+      closePanel();
+      if (item.modal) {
+        openModal(item.modal);                 /* 直接指定要打开哪个弹窗，最直观 */
+      } else if (item.action === "modal") {
+        openModal(MODALS[item.id]);            /* 兼容旧写法（按 id 映射） */
+      } else {
+        scrollToId(item.id);
+      }
+    }
+
+    /* 菜单项由 SITE_CONFIG 自动生成，加板块只要改配置 */
+    if (navBox && SITE_CONFIG && SITE_CONFIG.nav) {
+      SITE_CONFIG.nav.forEach(function (item) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "opt-row";
+        b.setAttribute("role", "menuitem");
+        /* 用 span + textContent 组装，避免名字里出现特殊字符时出问题 */
+        var labelEl = document.createElement("span");
+        labelEl.className = "grow";
+        labelEl.textContent = item.label || item.id || "";
+        var chevEl = document.createElement("span");
+        chevEl.className = "chev";
+        chevEl.setAttribute("aria-hidden", "true");
+        chevEl.textContent = item.modal ? "弹窗" : "›";
+        b.appendChild(labelEl);
+        b.appendChild(chevEl);
+        b.addEventListener("click", function () { go(item); });
+        navBox.appendChild(b);
+      });
+    }
+
+    <!-- 支持带 # 的链接直达：home.html#sites 停在对应板块，home.html#contact 直接开弹窗 -->
+    if (window.location.hash) {
+      var target = window.location.hash.slice(1);
+      setTimeout(function () {
+        if (target === "contact") openModal("contact-overlay");
+        else scrollToId(target);
+      }, 60);
+    }
+  })();
+} catch (e) { /* 设置面板异常忽略，不影响页面其他部分 */ }
+
+/* ---------- 点击复制：QQ 号 / 邮箱共用一段逻辑 ---------- */
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function () { el.classList.remove("show"); }, 1600);
+}
+function fallbackCopy(text, label) {
+  let ok = false;
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;left:-9999px;top:0;";
+    document.body.appendChild(ta);
+    ta.select();
+    ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+  } catch (e) { ok = false; }
+  toast(ok ? label + "已复制 ✅" : label + "：" + text);
+}
+/* btnId：按钮 id；attr：取值用的属性名；label：提示里的名字 */
+function bindCopy(btnId, attr, label) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener("click", function () {
+    const text = this.getAttribute(attr);
+    if (!text) return;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast(label + "已复制 ✅"); },
+        function () { fallbackCopy(text, label); }
+      );
+    } else {
+      fallbackCopy(text, label);
+    }
+  });
+}
+bindCopy("hero-qq-btn", "data-qq", "QQ 号");
+bindCopy("qq-btn", "data-qq", "QQ 号");                 /* 联系我弹窗里的 QQ 卡片 */
+bindCopy("mail-btn", "data-mail", "邮箱");               /* 联系我弹窗里的邮箱卡片 */
+bindCopy("contact-qq-btn", "data-qq", "QQ 号");          /* 页面上「联系我」栏目的 QQ 卡片 */
+bindCopy("contact-mail-btn", "data-mail", "邮箱");        /* 页面上「联系我」栏目的邮箱卡片 */
+
+/* ---------- 弹窗通用开关：点 ✕ / 点灰色背景 / 按 Esc 都能关 ---------- */
+try {
+  (function () {
+    function closesIt(el) {
+      while (el && el !== document) {
+        if (el.hasAttribute && (el.hasAttribute("data-close") || el.className === "modal-close")) return true;
+        el = el.parentNode;
+      }
+      return false;
+    }
+    document.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t) return;
+      /* closest 在部分环境/事件目标下不可靠，这里自己往上层找弹窗容器，最稳 */
+      function findOverlay(node) {
+        while (node && node !== document.body) {
+          var cn = (node.className && typeof node.className === "string") ? node.className : "";
+          if (/\b(modal-overlay|music-overlay)\b/.test(cn)) return node;
+          node = node.parentNode;
+        }
+        return null;
+      }
+      /* 点 ✕ 关闭按钮 → 关掉它所在的那个弹窗 */
+      if (closesIt(t)) {
+        var ov = findOverlay(t);
+        if (ov) ov.classList.remove("open");
+        return;
+      }
+      /* 点到弹窗外面的灰色背景 → 关闭（用上面那个可靠的判断） */
+      var box = findOverlay(t);
+      if (box && (t === box || t.classList.contains("modal-overlay") || t.classList.contains("music-overlay"))) {
+        box.classList.remove("open");
+        return;
+      }
+      for (var i = 0; i < MODAL_IDS.length; i++) {
+        var b = document.getElementById(MODAL_IDS[i]);
+        if (b && t === b) { b.classList.remove("open"); return; }
+      }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      for (var i = 0; i < MODAL_IDS.length; i++) {
+        var box = document.getElementById(MODAL_IDS[i]);
+        if (box) box.classList.remove("open");
+      }
+    });
+  })();
+} catch (e) { /* 弹窗异常忽略，不影响页面 */ }
+
+/* ---------- 首屏「在线 / 离线」状态小框 ----------
+ * online  → 绿灯      offline → 红灯
+ * 想改文案，改下面 setStatus 里的字
+ */
+try {
+  (function () {
+    var dot = document.getElementById("status-dot");
+    var txt = document.getElementById("status-text");
+    if (!dot || !txt) return;
+    function setStatus(online) {
+      dot.className = "status-dot " + (online ? "online" : "offline");
+      txt.textContent = online ? "在线" : "离线";
+    }
+    function refresh() { setStatus(navigator.onLine !== false); }
+    refresh();
+    window.addEventListener("online", refresh);
+    window.addEventListener("offline", refresh);
+  })();
+} catch (e) { /* 状态框异常忽略 */ }
+
+/* ---------- 滚动浮上来的入场动画 + 滚动浮动字幕条 ----------
+ * 1) 每块带 data-reveal 的内容，滚进视野时从下方 32px 浮上来，只播一次
+ * 2) 往下滑时顶部出现一个悬浮字幕条，文案取当前栏目上的 data-bar
+ */
+try {
+  (function () {
+    var root = document.documentElement;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    /* ---- 入场动画 ---- */
+    var items = document.querySelectorAll("[data-reveal]");
+    function showAll() {
+      for (var i = 0; i < items.length; i++) items[i].classList.add("in");
+    }
+    if (!items.length || !("IntersectionObserver" in window)) {
+      showAll();
+    } else if (reduce || root.classList.contains("no-motion")) {
+      showAll();   /* 关了动效就直接全部显示 */
+      root.classList.add("js-ready");
+    } else {
+      root.classList.add("js-ready");   /* 加了它才会启用"先隐藏、再浮上来"的样式 */
+      var io = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            entries[i].target.classList.add("in");
+            io.unobserve(entries[i].target);   /* 只播一次 */
+          }
+        }
+      }, { rootMargin: "0px 0px -12% 0px", threshold: 0.08 });
+      for (var i = 0; i < items.length; i++) io.observe(items[i]);
+    }
+
+    /* ---- 浮动字幕条 ---- */
+    var bar = document.getElementById("float-bar");
+    var barText = document.getElementById("float-text");
+    if (!bar || !barText) return;
+    var sections = document.querySelectorAll("section[id][data-bar]");
+    var capVisible = false, switchTimer = null, hideTimer = null, capIO = null;
+
+    /* 让字幕条自己躲开「左上角时间」和「右上角天气」，窄屏也不会压住它们 */
+    (function () {
+      var clock = document.getElementById("clock");
+      var weather = document.getElementById("weather");
+      function safeTop() {
+        var bottom = 0;
+        [clock, weather].forEach(function (el) {
+          if (!el) return;
+          var r = el.getBoundingClientRect();
+          if (r.width && r.bottom > bottom) bottom = r.bottom;
+        });
+        /* 桌面端至少留 14px 的上边距；移动端若撞上时间/天气就往下让 */
+        return Math.max(14, Math.round(bottom + 10));
+      }
+      function layout() { bar.style.top = safeTop() + "px"; }
+      layout();
+      window.addEventListener("resize", layout);
+      window.addEventListener("orientationchange", layout);
+      /* 天气是联网后才有高度，等它出现再量一次 */
+      setTimeout(layout, 400);
+      setTimeout(layout, 1800);
+    })();
+
+    bar.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    /* 字幕条只在「正在滑动屏幕」时出现；手指/滚轮一停，约 0.9 秒后自动收起来。
+       之前是只要出现过就一直挂着，而且切换栏目时如果定时器被打断，
+       .switching 状态会残留（opacity 0.15），看起来就是「不动屏幕时有一条虚化的条」。
+       现在改成：静止 = 完全看不见，滑动 = 才看见。 */
+    var IDLE_MS = 900;
+    var idleTimer = null;
+    var capText = "";          /* 这一屏该显示的文案，空字符串 = 这一屏不显示 */
+
+    function paintBar() {
+      if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+      bar.classList.remove("switching");     /* 永远别停在半透明状态 */
+    }
+    function showBar() {
+      if (!capText) { hideBar(); return; }
+      paintBar();
+      barText.textContent = capText;
+      bar.classList.add("show");
+      capVisible = true;
+    }
+    function hideBar() {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      bar.classList.remove("show");
+      paintBar();
+      capVisible = false;
+    }
+    /* 每次滑动都调用：先亮出来，再把「收起」的倒计时重新计时 */
+    function kickBar() {
+      if (!capText) { hideBar(); return; }
+      if (hideTimer) { clearTimeout(hideTimer); }
+      showBar();
+      hideTimer = setTimeout(hideBar, IDLE_MS);
+    }
+
+    function applyCap() {
+      /* 取"当前占屏幕最多的那个栏目"的 data-bar */
+      var best = null, bestArea = 0;
+      for (var i = 0; i < sections.length; i++) {
+        var r = sections[i].getBoundingClientRect();
+        var area = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+        if (area > bestArea) { bestArea = area; best = sections[i]; }
+      }
+      if (best && best.id === "hero") best = null;   /* 首屏不显示 */
+      var next = best ? (best.getAttribute("data-bar") || "") : "";
+      var changed = (next !== capText);
+      capText = next;
+      if (changed) { paintBar(); if (capText) barText.textContent = capText; }
+      kickBar();
+    }
+    if ("IntersectionObserver" in window && sections.length) {
+      capIO = new IntersectionObserver(function () { applyCap(); },
+        { threshold: [0, 0.05, 0.15, 0.3, 0.5, 0.75, 1] });
+      for (var s = 0; s < sections.length; s++) capIO.observe(sections[s]);
+    }
+    /* scroll 覆盖鼠标滚轮 / 键盘 / 拖滚动条；touchmove 覆盖手机上手指还没抬起就停止滑动的情况 */
+    window.addEventListener("scroll", applyCap, { passive: true });
+    window.addEventListener("touchmove", kickBar, { passive: true });
+    window.addEventListener("wheel", kickBar, { passive: true });
+    /* 打开页面时先算好文案但不要显示 —— 等用户真的开始滑才出现 */
+    if (sections.length) {
+      var b0 = null, a0 = 0;
+      for (var k = 0; k < sections.length; k++) {
+        var r0 = sections[k].getBoundingClientRect();
+        var a = Math.min(r0.bottom, window.innerHeight) - Math.max(r0.top, 0);
+        if (a > a0) { a0 = a; b0 = sections[k]; }
+      }
+      capText = (b0 && b0.id !== "hero") ? (b0.getAttribute("data-bar") || "") : "";
+      if (capText) barText.textContent = capText;
+    }
+  })();
+} catch (e) { /* 动画异常忽略，页面照常显示 */ }
+
+/* ---------- 点击 / 滑动屏幕的粒子小特效 + 背景轻微视差 ----------
+ * 1) 点屏幕任意处：炸出 12 个大一点的符号（✦ ✧ · 等）四散飞开，带光晕
+ * 2) 按住拖动：沿轨迹拖出一串小星星
+ * 3) 鼠标移动：背景的云和恐龙轻微反向位移，页面有"景深"感（手机靠陀螺仪也支持）
+ */
+try {
+  (function () {
+    var root = document.documentElement;
+    var CHARS = ["✦", "✧", "·", "✳", "⋆"];
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var lastSpawn = 0;
+
+    function motionOff() {
+      return document.body.classList.contains("no-motion") || reduce;
+    }
+    function burst(x, y, count, spread) {
+      if (motionOff()) return;
+      count = count || 6;
+      spread = spread || 34;
+      for (var i = 0; i < count; i++) {
+        var s = document.createElement("span");
+        s.className = "spark";
+        s.textContent = CHARS[i % CHARS.length];
+        var ang = (Math.PI * 2 * i) / count + Math.random() * 0.7;
+        var dist = spread * (0.6 + Math.random() * 0.9);
+        s.style.left = x + "px";
+        s.style.top = y + "px";
+        s.style.setProperty("--sx", Math.round(Math.cos(ang) * dist) + "px");
+        s.style.setProperty("--sy", Math.round(Math.sin(ang) * dist) + "px");
+        s.style.setProperty("--sr", Math.round((Math.random() - 0.5) * 260) + "deg");
+        s.style.fontSize = (18 + Math.random() * 16).toFixed(1) + "px";
+        s.style.opacity = (0.85 + Math.random() * 0.15).toFixed(2);
+        document.body.appendChild(s);
+        (function (node) {
+          setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, 1100);
+        })(s);
+      }
+    }
+    /* 点一下：炸出一簇大星星（数量、大小、飞散距离都比以前明显） */
+    document.addEventListener("click", function (e) {
+      burst(e.clientX, e.clientY, 12, 64);
+    });
+    /* 按住拖动（鼠标 + 手指都走 pointer 事件），拖的时候沿路撒星星 */
+    document.addEventListener("pointermove", function (e) {
+      if (e.buttons !== 1 && e.pointerType === "mouse") return;   /* 鼠标要按住才算滑动 */
+      if (e.pressure === 0 && e.pointerType !== "mouse") return;  /* 手指没按下 */
+      var now = Date.now();
+      if (now - lastSpawn < 80) return;
+      lastSpawn = now;
+      burst(e.clientX, e.clientY, 1, 22);
+    }, { passive: true });
+    /* 触摸滑动（有些浏览器 pointer 事件不完整，补一条） */
+    document.addEventListener("touchmove", function (e) {
+      var t = e.touches && e.touches[0];
+      if (!t) return;
+      var now = Date.now();
+      if (now - lastSpawn < 90) return;
+      lastSpawn = now;
+      burst(t.clientX, t.clientY, 1, 22);
+    }, { passive: true });
+
+    /* 背景视差：鼠标 / 手机倾斜时，云和恐龙轻微移动 */
+    var scene = document.getElementById("scene");
+    if (!scene || motionOff()) return;
+    var clouds = document.querySelectorAll(".cloud-img");
+    var dino = document.getElementById("dino-runner");
+    var raf = 0, tx = 0, ty = 0;
+    function apply() {
+      raf = 0;
+      var cx = tx * 8, cy = ty * 5;
+      for (var i = 0; i < clouds.length; i++) {
+        clouds[i].style.transform = "translate(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px)";
+      }
+      if (dino) dino.style.transform = "translate(" + (cx * 0.45).toFixed(1) + "px, 0)";
+    }
+    function onMove(nx, ny) {
+      tx = nx; ty = ny;
+      if (!raf) raf = requestAnimationFrame(apply);
+    }
+    document.addEventListener("mousemove", function (e) {
+      onMove((e.clientX / window.innerWidth - 0.5) * 2, (e.clientY / window.innerHeight - 0.5) * 2);
+    }, { passive: true });
+    /* 手机：靠设备方向（没有权限 / 不支持时自动跳过） */
+    window.addEventListener("deviceorientation", function (e) {
+      if (typeof e.gamma !== "number" || typeof e.beta !== "number") return;
+      onMove(Math.max(-1, Math.min(1, e.gamma / 30)), Math.max(-1, Math.min(1, (e.beta - 45) / 40)));
+    }, { passive: true });
+  })();
+} catch (e) { /* 特效异常忽略，不影响页面功能 */ }
+
+/* 「来查成分！」现在是全部直接显示的，不需要点击脚本。
+   （以前那套「点 tag 展开成分详情」的逻辑已经删掉了。
+     想加一条，直接复制 HTML 里任意一个 <li class="taste-item"> 改文字就行。） */
+
+/* ---------- 一些有趣的网站：点标题整块收起 / 展开 ---------- */
+try {
+  (function () {
+    var section = document.getElementById("sites");
+    var head = document.getElementById("sites-toggle");
+    var mark = head ? head.querySelector(".toggle-mark") : null;
+    var markArrow = head ? head.querySelector(".tm-arrow") : null;
+    var markText = head ? head.querySelector(".tm-text") : null;
+    if (!section || !head) return;
+    head.addEventListener("click", function () {
+      var collapsed = section.classList.toggle("collapsed");
+      head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      /* 只换文字和箭头方向，文字本身始终横排（箭头由 CSS 旋转） */
+      if (markArrow) markArrow.textContent = collapsed ? "▶" : "▼";
+      if (markText) markText.textContent = collapsed ? "点击展开" : "点击收起";
+      else if (mark) mark.textContent = collapsed ? "▶ 点击展开" : "▼ 点击收起";
+    });
+  })();
+} catch (e) { /* 折叠异常忽略，内容照常显示 */ }
+
+/* ============================================================
+ * 关于主页 + 页脚：网站创建时间 + 真实访问次数
+ *   - 次数来自免费计数服务 abacus.jasoncameron.dev（返回 JSON）
+ *   - 每打开一次页面就 +1；显示的就是服务端返回的真实累计次数，不再额外加数字
+ *   - 「关于主页」弹窗和页面最下面的页脚共用同一份数字
+ *   - 断网 / 被拦截时显示 — ，并提示原因，不影响其它功能
+ * ============================================================ */
+try {
+  (function () {
+    var CREATED = { y: 2026, m: 10, d: 6 };   /* 网站创建时间：想改就改这里 */
+    var CREATED_TEXT = "2026 年 10 月 6 日";   /* 页脚/弹窗里显示的文字 */
+    var BASE_VISITS = 0;                      /* 以前这里加了 40（把数字凑好看），现在去掉，显示服务端返回的真实累计次数 */
+    var API = "https://abacus.jasoncameron.dev/hit/aceice-homepage/visits";
+
+    var daysEl = document.getElementById("site-days");
+    var countEl = document.getElementById("visit-count");
+    var footVisitsEl = document.getElementById("foot-visits");
+    var createdEl = document.getElementById("site-created");
+    var footCreatedEl = document.getElementById("foot-created");
+    var noteEl = document.getElementById("visit-note");
+
+    /* 创建时间文字：弹窗 + 页脚都填上 */
+    if (createdEl) createdEl.textContent = CREATED_TEXT;
+    if (footCreatedEl) footCreatedEl.textContent = CREATED_TEXT;
+
+    /* 已经运行了几天 */
+    if (daysEl) {
+      var born = new Date(CREATED.y, CREATED.m - 1, CREATED.d);
+      var days = Math.max(1, Math.floor((new Date() - born) / 86400000));
+      daysEl.textContent = days + " 天";
+    }
+
+    if (!countEl && !footVisitsEl) return;
+
+    /* 一处拿到数字，弹窗和页脚一起更新 */
+    function show(n) {
+      if (countEl) countEl.textContent = n;
+      if (footVisitsEl) footVisitsEl.textContent = n;
+    }
+    function note(msg) { if (noteEl) noteEl.textContent = msg; }
+    function num(data) { return (data && typeof data.value === "number") ? data.value + BASE_VISITS : null; }
+
+    if (!window.fetch) {
+      show("— —");
+      note("当前浏览器不支持联网计数");
+      return;
+    }
+
+    /* 每访问一次 +1，服务端返回的最新数字 + 已有基数 = 显示值 */
+    fetch(API, { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        var n = num(data);
+        if (n === null) throw new Error("bad data");
+        show(n);
+      })
+      .catch(function () {
+        /* 联网失败：退回只读接口，再不行就显示 — */
+        fetch(API.replace("/hit/", "/get/"), { cache: "no-store" })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            var n = num(data);
+            if (n === null) throw new Error("bad data");
+            show(n);
+            note("本次未能计数（网络受限），显示的是上一次的数字");
+          })
+          .catch(function () {
+            show("— —");
+            note("计数服务暂时连不上，联网打开网页即可看到真实次数");
+          });
+      });
+  })();
+} catch (e) { /* 计数异常忽略，不影响页面其它功能 */ }
+
+/* ============================================================
+ * 右上角：定位地区 + 实时天气（地区和天气都用中文显示）
+ *   - 定位：ip.zxinc.org（中文地区，免密钥）→ ipwho.is / ip-api.com 兜底 + 本地中文对照表
+ *   - 天气：open-meteo.com（免费、免密钥、实测数据，每 10 分钟刷新）
+ *   - 天气用 emoji 表示；定位/天气结果会缓存，避免频繁请求
+ *   - 断网 / 接口不可用时自动隐藏，不影响页面
+ * ============================================================ */
+try {
+  (function () {
+    var box = document.getElementById("weather");
+    if (!box) return;
+    var placeEl = box.querySelector(".w-place");
+    var emojiEl = box.querySelector(".w-emoji");
+    var tempEl = box.querySelector(".w-temp");
+    if (!window.fetch || !placeEl) return;
+
+    var WX_CACHE = "dino-weather";    /* 天气缓存 10 分钟 */
+    var GEO_CACHE = "dino-geo-v3";    /* 地区缓存 24 小时
+                                         v2：修了「只显示中国」
+                                         v3：修了「显示成运营商名字（无线基站网络）」
+                                         每次改了地区解析逻辑，都要把这个版本号 +1，
+                                         否则浏览器会继续用 24 小时的旧缓存，改了像没改一样。 */
+    var REFRESH_MS = 10 * 60 * 1000;
+
+    /* 天气代码（WMO）→ emoji */
+    var WMO = {
+      0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
+      45: "🌫️", 48: "🌫️",
+      51: "🌦️", 53: "🌦️", 55: "🌦️", 56: "🌧️", 57: "🌧️",
+      61: "🌧️", 63: "🌧️", 65: "🌧️", 66: "🌧️", 67: "🌧️",
+      71: "🌨️", 73: "🌨️", 75: "❄️", 77: "🌨️",
+      80: "🌦️", 81: "🌧️", 82: "⛈️",
+      85: "🌨️", 86: "❄️",
+      95: "⛈️", 96: "⛈️", 99: "⛈️"
+    };
+    function wmoEmoji(code) { return WMO[code] || "🌡️"; }
+
+    /* 英文地名 → 中文（ipwho.is / ip-api.com 兜底时会用到，想加城市照着写） */
+    var CITY_ZH = {
+      "Shenyang": "沈阳", "Dalian": "大连", "Beijing": "北京", "Shanghai": "上海", "Guangzhou": "广州",
+      "Shenzhen": "深圳", "Tianjin": "天津", "Chongqing": "重庆", "Chengdu": "成都", "Wuhan": "武汉",
+      "Xi'an": "西安", "Xian": "西安", "Nanjing": "南京", "Hangzhou": "杭州", "Suzhou": "苏州",
+      "Harbin": "哈尔滨", "Changchun": "长春", "Jinan": "济南", "Qingdao": "青岛", "Zhengzhou": "郑州",
+      "Changsha": "长沙", "Fuzhou": "福州", "Xiamen": "厦门", "Kunming": "昆明", "Guiyang": "贵阳",
+      "Nanning": "南宁", "Hefei": "合肥", "Nanchang": "南昌", "Taiyuan": "太原", "Shijiazhuang": "石家庄",
+      "Lanzhou": "兰州", "Urumqi": "乌鲁木齐", "Hohhot": "呼和浩特", "Yinchuan": "银川", "Xining": "西宁",
+      "Lhasa": "拉萨", "Haikou": "海口", "Sanya": "三亚", "Hong Kong": "香港", "Macau": "澳门",
+      "Taipei": "台北", "Liaoning": "辽宁", "Jilin": "吉林", "Heilongjiang": "黑龙江"
+    };
+    function toZh(name) { return CITY_ZH[name] || name || "未知地区"; }
+
+    /* 一串「运营商 / 网络类型」的垃圾词，不能当地名显示。
+       纯真 IP 库经常在最后一个字段挂这种东西，比如
+       「中国–辽宁省–沈阳市–无线基站网络」「中国–辽宁–沈阳–移动」，
+       以前「从后往前取第一个」就会把「无线基站网络」当成地区显示出来。 */
+    var JUNK_RE = /(网络|基站|无线|移动|联通|电信|铁通|广电|教育网|通信|宽带|光纤|专线|集团|公司|有限|数据|信息|技术|服务|接入|卫星|机房|小区|用户|业务|省际|国际|骨干)/;
+
+    /* 把接口给的地区字符串整理成「市」。
+       各接口格式不统一，下面这些都得出「沈阳」：
+         "中国–辽宁–沈阳" / "中国 辽宁省 沈阳市 移动" / "中国–辽宁省–沈阳市–无线基站网络" / "辽宁沈阳"
+       如果只剩「中国」这种国家名（问不到具体地区），就返回 ""，
+       好让上层接着试下一个接口 —— 之前就是这里没判断国家名，
+       于是把「中国」当成了地区显示出来，右上角只显示「中国」。 */
+    function pickZhCity(raw) {
+      if (!raw) return "";
+      var s = String(raw)
+        .replace(/（[^）]*）|\([^)]*\)/g, " ")          /* 去掉括号里的注释 */
+        .trim();
+      /* 横线 / 竖线 / 逗号 / 斜杠 / 顿号 / 分号 / 空白 全都当分隔符（中文地名内部没有空格） */
+      var parts = s.split(/[\u2013\u2014\-\u2010|\uff5c,\uff0c\/\u3001;\uff1b\s]+/)
+        .map(function (x) { return x.trim(); })
+        .filter(Boolean)
+        /* 去掉国家名、去掉运营商 / 网络类型这些垃圾词 */
+        .filter(function (x) { return !/^(中国|中华人民共和国|China|CHN|CN)$/i.test(x); })
+        .filter(function (x) { return !JUNK_RE.test(x); });
+      if (!parts.length) return "";
+
+      /* 优先「XX市」，其次「XX区 / 县 / 州 / 盟 / 旗」，实在没有才用最后一个。
+         注意不能直接取最后一个：运营商注释就挂在最后面。 */
+      var city = "";
+      for (var i = parts.length - 1; i >= 0; i--) {
+        if (/市$/.test(parts[i])) { city = parts[i]; break; }
+      }
+      if (!city) {
+        for (var j = parts.length - 1; j >= 0; j--) {
+          if (/(区|县|州|盟|旗|镇)$/.test(parts[j])) { city = parts[j]; break; }
+        }
+      }
+      if (!city) city = parts[parts.length - 1];
+      return city.replace(/(市|省|自治区|特别行政区|特别行政區|地区|盟|自治州|县|区|旗)$/, "").trim();
+    }
+    /* 纯英文地名（ipwho.is 那种）先查中文对照表；中文的走上面的整理 */
+    function normCity(v) {
+      if (!v) return "";
+      var s = String(v).trim();
+      if (!s) return "";
+      if (/^[\x00-\x7F]+$/.test(s)) return toZh(s);
+      return pickZhCity(s);
+    }
+
+    function cacheGet(key, ttl) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (!raw) return null;
+        var obj = JSON.parse(raw);
+        if (!obj || (Date.now() - obj.t) > ttl) return null;
+        return obj.v;
+      } catch (e) { return null; }
+    }
+    function cacheSet(key, v) {
+      try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), v: v })); } catch (e) { }
+    }
+
+    function render(city, emoji, temp, region) {
+      var hasTemp = (typeof temp === "number") && isFinite(temp);
+      placeEl.textContent = city;
+      emojiEl.textContent = emoji;
+      tempEl.textContent = hasTemp ? (Math.round(temp) + "°C") : "—";
+      box.classList.add("show");
+      var full = (region ? region + " " : "") + city + " " + emoji + (hasTemp ? " " + Math.round(temp) + "°C" : "");
+      box.title = full + "（实时天气，每 10 分钟更新）";
+    }
+
+    /* ---- 关键：所有请求都带超时 ----
+       之前右上角「什么都不显示」，最常见的原因就是某个接口一直不回包：
+       fetch 没有超时就会永久挂着，update() 的 then 永远不执行，
+       render() 一次都没跑，于是 display:none 一直不解除 —— 看起来就是「天气显示不了」。
+       这里用 Promise.race 硬超时（不依赖 AbortController 是否可用），
+       所以哪怕接口彻底不回包，5 秒后也一定会继续往下走。 */
+    function fetchJSON(url, ms) {
+      ms = ms || 5000;
+      var opt = { cache: "no-store" };
+      var ctrl = (typeof AbortController === "function") ? new AbortController() : null;
+      if (ctrl) opt.signal = ctrl.signal;
+      var req = fetch(url, opt).then(function (r) { return r.json(); });
+      var killer = new Promise(function (_, reject) {
+        setTimeout(function () {
+          if (ctrl) { try { ctrl.abort(); } catch (e) { } }   /* 顺手中断，省流量 */
+          reject(new Error("timeout"));
+        }, ms);
+      });
+      return Promise.race([req, killer]);
+    }
+
+    /* 兜底城市：三个定位接口全问不到时用这个，保证天气栏永远不会空着。
+       想改成你常待的地方，改这三行就行（经纬度随便搜一下就能查到）。 */
+    var FALLBACK = { city: "沈阳", region: "辽宁", lat: 41.8057, lon: 123.4315 };
+
+    /* 从若干个候选字段里挑第一个有效数字（不同接口的经纬度字段名不一样） */
+    function num() {
+      for (var i = 0; i < arguments.length; i++) {
+        var v = arguments[i];
+        if (typeof v === "number" && isFinite(v)) return v;
+        if (typeof v === "string" && v && isFinite(Number(v))) return Number(v);
+      }
+      return undefined;
+    }
+
+    /* ① 中文地区接口 */
+    function geoFromZxinc() {
+      return fetchJSON("https://ip.zxinc.org/api.php?type=json")
+        .then(function (d) {
+          var data = d && d.data;
+          if (!data) throw new Error("zxinc failed");
+          /* location 里偶尔只有运营商注释，那就再看一眼独立的 city 字段 */
+          var city = pickZhCity(data.location || data.country || "") || pickZhCity(data.city || "");
+          if (!city) throw new Error("zxinc: no region");   /* 只问到「中国」不算成功 */
+          return {
+            city: city,
+            region: pickZhCity(data.province || data.region || ""),
+            lat: num(data.lat, data.latitude),
+            lon: num(data.lng, data.lon, data.longitude)
+          };
+        });
+    }
+    /* ② ipwho.is：英文地名 → 本地对照表翻中文（同时给经纬度） */
+    function geoFromIpwho() {
+      return fetchJSON("https://ipwho.is/")
+        .then(function (d) {
+          if (!d || d.success === false) throw new Error("ipwho failed");
+          var city = normCity(d.city) || normCity(d.region);
+          if (!city || /^(中国|China)$/i.test(city)) throw new Error("ipwho: no region");
+          return { city: city, region: normCity(d.region), lat: d.latitude, lon: d.longitude };
+        });
+    }
+    /* ③ ip-api.com：直接支持中文 */
+    function geoFromIpApi() {
+      return fetchJSON("http://ip-api.com/json/?fields=status,city,regionName,lat,lon&lang=zh-CN")
+        .then(function (d) {
+          if (!d || d.status !== "success") throw new Error("ipapi failed");
+          var city = normCity(d.city) || normCity(d.regionName);
+          if (!city) throw new Error("ipapi: no region");
+          return { city: city, region: normCity(d.regionName), lat: d.lat, lon: d.lon };
+        });
+    }
+
+    /* 缓存里的地区也要再体检一次：万一以前存进了「无线基站网络」这种垃圾，
+       或者版本号没来及换，这里直接丢掉重新查，不能让它一直显示下去。 */
+    function usableCity(v) {
+      if (!v) return "";
+      var s = String(v).trim();
+      if (!s) return "";
+      if (JUNK_RE.test(s)) return "";                                  /* 运营商 / 网络注释 */
+      if (/^(中国|中华人民共和国|China|CHN|CN|未知地区)$/i.test(s)) return "";  /* 国家名 / 占位词 */
+      if (s.length > 10) return "";                                    /* 正常地名没这么长 */
+      return s;
+    }
+
+    /* 三个接口同时问，谁先给出具体地区就用谁 —— 比一个一个试快得多，
+       也不会因为第一个接口卡住就整体卡住（每个都自带 5 秒超时） */
+    function getGeo() {
+      var cached = cacheGet(GEO_CACHE, 24 * 3600 * 1000);
+      if (cached && usableCity(cached.city)) {
+        cached.city = usableCity(cached.city);
+        return Promise.resolve(cached);
+      }
+      var blank = function () { return null; };
+      return Promise.all([
+        geoFromZxinc().catch(blank),
+        geoFromIpwho().catch(blank),
+        geoFromIpApi().catch(blank)
+      ]).then(function (list) {
+        var good = list.filter(function (g) { return g && usableCity(g.city); });
+        good.forEach(function (g) { g.city = usableCity(g.city); });
+        if (!good.length) return FALLBACK;          /* 不缓存兜底，下次刷新还能再问 */
+        var out = { city: good[0].city, region: good[0].region || "" };
+        for (var i = 0; i < good.length; i++) {
+          if (!out.region && good[i].region) out.region = good[i].region;
+          if (typeof out.lat !== "number" && typeof good[i].lat === "number") {
+            out.lat = good[i].lat; out.lon = good[i].lon;
+          }
+        }
+        cacheSet(GEO_CACHE, out);
+        return out;
+      });
+    }
+
+    /* 有经纬度就用精确天气；没有就「城市名 → 经纬度」补一次。
+       优先用 open-meteo 自己的地名搜索接口（和天气接口同一个域名，成功率最高），
+       拿不到再退回 ipwho.is；两条路都带超时。 */
+    function withCoords(g) {
+      if (typeof g.lat === "number" && typeof g.lon === "number") return Promise.resolve(g);
+      var geoUrl = "https://geocoding-api.open-meteo.com/v1/search?count=1&language=zh&name=" +
+        encodeURIComponent(g.city);
+      return fetchJSON(geoUrl)
+        .then(function (d) {
+          var hit = d && d.results && d.results[0];
+          if (!hit || typeof hit.latitude !== "number") throw new Error("geocode: no result");
+          g.lat = hit.latitude;
+          g.lon = hit.longitude;
+          if (!g.region && hit.admin1) g.region = hit.admin1;
+          return g;
+        })
+        .catch(function () {
+          return fetchJSON("https://ipwho.is/")
+            .then(function (d) {
+              if (d && typeof d.latitude === "number") { g.lat = d.latitude; g.lon = d.longitude; }
+              return g;
+            })
+            .catch(function () { return g; });
+        });
+    }
+
+    function getWeather(lat, lon) {
+      var url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+        "&current=temperature_2m,weather_code";
+      return fetchJSON(url).then(function (d) {
+        if (!d || !d.current || typeof d.current.temperature_2m !== "number") throw new Error("weather failed");
+        return { temp: d.current.temperature_2m, code: d.current.weather_code };
+      });
+    }
+
+    function update() {
+      getGeo()
+        .then(function (g) {
+          return withCoords(g).then(function (gg) {
+            var region = gg.region || "";
+            /* 只有地区、拿不到坐标：只显示地区 */
+            if (typeof gg.lat !== "number") { render(gg.city, "🌡️", NaN, region); return; }
+            var cachedWx = cacheGet(WX_CACHE, REFRESH_MS);
+            if (cachedWx && cachedWx.city === gg.city) {
+              render(gg.city, cachedWx.emoji, cachedWx.temp, region);
+              return;
+            }
+            /* 先把地区和天气栏显示出来，温度等接口回来再补 ——
+               这样就算天气接口慢 / 挂了，右上角也一定看得见东西 */
+            render(gg.city, "🌡️", NaN, region);
+            return getWeather(gg.lat, gg.lon).then(function (w) {
+              var emoji = wmoEmoji(w.code);
+              cacheSet(WX_CACHE, { city: gg.city, emoji: emoji, temp: w.temp });
+              render(gg.city, emoji, w.temp, region);
+            }).catch(function () { /* 天气拿不到就只显示地区 */ });
+          });
+        })
+        .catch(function () { /* 万一还是出错，至少把兜底城市显示出来 */
+          render(FALLBACK.city, "🌡️", NaN, FALLBACK.region);
+        });
+    }
+
+    update();
+    /* 每 10 分钟自动刷新一次天气 */
+    setInterval(update, REFRESH_MS);
+  })();
+} catch (e) { /* 天气异常忽略，不影响页面 */ }
+
+/* 恐龙模块的启动已内嵌在模块内部，无需额外代码 */
+
+/* ---------- 页脚最下面的「回到顶部」 ---------- */
+try {
+  (function () {
+    var btn = document.getElementById("to-top");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      /* 关了动效 / 系统开了减弱动态，就直接跳上去，不做平滑滚动 */
+      var smooth = !document.body.classList.contains("no-motion");
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: smooth ? "smooth" : "auto" });
+      } catch (e) {
+        window.scrollTo(0, 0);      /* 老浏览器不支持对象参数时的退路 */
+      }
+    });
+  })();
+} catch (e) { /* 回到顶部异常忽略 */ }
+</script>
+</body>
+</html>
